@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { register } from '../services/authService';
-import './LoginPage.css';
+import '../componentsStyles/LoginPage.css';
 
 const RegisterPage = () => {
     const [name, setName] = useState('');
@@ -9,6 +9,7 @@ const RegisterPage = () => {
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
@@ -20,11 +21,15 @@ const RegisterPage = () => {
         }
         setIsLoading(true);
         setError('');
+        setSuccess('');
 
         try {
             const response = await register(name, email, password);
             if (response.token && response.user) {
-                navigate('/dashboard');
+                setSuccess('Registration successful! Redirecting to login...');
+                setTimeout(() => {
+                    navigate('/login');
+                }, 2000);
             }
         } catch (err) {
             setError(typeof err === 'string' ? err : 'Registration failed');
@@ -78,6 +83,7 @@ const RegisterPage = () => {
                     })
                 ),
                 error && React.createElement('div', { className: 'error-message' }, error),
+                success && React.createElement('div', { className: 'success-message' }, success),
                 React.createElement('button', {
                     type: 'submit',
                     disabled: isLoading,

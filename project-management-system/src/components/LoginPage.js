@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/authService';
-import './LoginPage.css';
+import '../componentsStyles/LoginPage.css';
 
 const LoginPage = () => {
     const [email, setEmail] = useState('');
@@ -18,6 +18,7 @@ const LoginPage = () => {
         try {
             const response = await login(email, password);
             if (response.token && response.user) {
+                localStorage.setItem('user', JSON.stringify(response.user));
                 navigate('/dashboard');
             } else {
                 setError('Invalid login response');

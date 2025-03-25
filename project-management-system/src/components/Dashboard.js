@@ -1,10 +1,26 @@
-import React from 'react';
-import styles from './Dashboard.module.css';
+import React, { useState, useEffect } from 'react';
+import styles from '../componentsStyles/Dashboard.module.css';
+import LogoutButton from './LogoutButton';
 
 const Dashboard = () => {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      setUser(JSON.parse(userData));
+    }
+  }, []);
+
   return (
     <div className={styles.dashboard}>
-      <h1>Dashboard</h1>
+      <div className={styles.header}>
+        <div>
+          <h1>Dashboard</h1>
+          {user && <p className={styles.welcome}>Welcome, {user.name}</p>}
+        </div>
+        <LogoutButton />
+      </div>
       
       <div className={styles.gridContainer}>
         <section className={styles.section}>
