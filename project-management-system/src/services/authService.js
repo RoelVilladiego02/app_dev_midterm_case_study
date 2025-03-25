@@ -11,7 +11,11 @@ delete axios.defaults.headers.common['Content-Type'];
 const setupCSRF = async () => {
     try {
         await axios.get(`${API_URL}/sanctum/csrf-cookie`, {
-            withCredentials: true
+            withCredentials: true,
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
     } catch (error) {
         console.error('CSRF cookie error:', error);
@@ -25,6 +29,13 @@ export const login = async (email, password) => {
         const response = await axios.post(`${API_URL}/api/login`, {
             email,
             password
+        }, {
+            withCredentials: true,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
         if (response.data.token) {
@@ -49,6 +60,13 @@ export const register = async (name, email, password) => {
             email,
             password,
             password_confirmation: password // Required by Laravel validation
+        }, {
+            withCredentials: true,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
         });
 
         if (response.data.token) {
@@ -68,8 +86,12 @@ export const register = async (name, email, password) => {
 export const logout = async () => {
     try {
         await axios.post(`${API_URL}/api/logout`, {}, {
+            withCredentials: true,
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
             }
         });
     } finally {
