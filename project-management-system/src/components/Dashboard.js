@@ -1,10 +1,13 @@
+// Main dashboard component displaying user's projects and tasks
 import React, { useState, useEffect } from 'react';
 import styles from '../componentsStyles/Dashboard.module.css';
 import LogoutButton from './LogoutButton';
 
 const Dashboard = () => {
+  // State for storing user data
   const [user, setUser] = useState(null);
 
+  // Effect to load user data from localStorage on component mount
   useEffect(() => {
     const userData = localStorage.getItem('user');
     if (userData) {
@@ -12,6 +15,7 @@ const Dashboard = () => {
     }
   }, []);
 
+  // Render dashboard layout with projects and tasks sections
   return (
     <div className={styles.dashboard}>
       <div className={styles.header}>

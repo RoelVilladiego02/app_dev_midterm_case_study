@@ -1,22 +1,28 @@
+// Component for user login
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/authService';
 import '../componentsStyles/LoginPage.css';
 
 const LoginPage = () => {
+    // State variables for form inputs and UI states
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
+    // Handle form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
+        // Set loading state and clear error
         setIsLoading(true);
         setError('');
 
         try {
+            // Attempt to login using authService
             const response = await login(email, password);
+            // If login successful, store user data and redirect
             if (response.token && response.user) {
                 localStorage.setItem('user', JSON.stringify(response.user));
                 navigate('/dashboard');
@@ -30,6 +36,7 @@ const LoginPage = () => {
         }
     };
 
+    // Render login form using React.createElement
     return React.createElement('div', { className: 'login-container' },
         React.createElement('div', { className: 'login-box' },
             React.createElement('h2', null, 'Login'),
