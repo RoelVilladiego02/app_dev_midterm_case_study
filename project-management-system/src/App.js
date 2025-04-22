@@ -3,6 +3,11 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import Dashboard from './components/Dashboard';
+import CreateProject from './components/CreateProject';
+import EditProject from './components/EditProject';
+import ProjectView from './components/ProjectView';
+import CreateTask from './components/CreateTask';
+import UpdateTask from './components/UpdateTask';
 import './App.css';
 
 /**
@@ -29,12 +34,56 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           
-          {/* Protected dashboard route */}
+          {/* Protected routes */}
           <Route
             path="/dashboard"
             element={
               <PrivateRoute>
                 <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          
+          {/* Project routes */}
+          <Route
+            path="/projects/create"
+            element={
+              <PrivateRoute>
+                <CreateProject />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/projects/:projectId"
+            element={
+              <PrivateRoute>
+                <ProjectView />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/projects/:projectId/edit"
+            element={
+              <PrivateRoute>
+                <EditProject />
+              </PrivateRoute>
+            }
+          />
+          
+          {/* Task routes */}
+          <Route
+            path="/projects/:projectId/tasks/create"
+            element={
+              <PrivateRoute>
+                <CreateTask />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/projects/:projectId/tasks/:taskId/edit"
+            element={
+              <PrivateRoute>
+                <UpdateTask />
               </PrivateRoute>
             }
           />

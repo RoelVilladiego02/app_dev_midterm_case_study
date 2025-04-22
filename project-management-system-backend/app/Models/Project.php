@@ -10,10 +10,12 @@ class Project extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title',
+        'title', 
         'description',
-        'deadline',
         'user_id',
+        'start_date',
+        'end_date',
+        'status',
     ];
 
     public function user()

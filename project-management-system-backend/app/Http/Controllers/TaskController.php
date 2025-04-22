@@ -21,15 +21,17 @@ class TaskController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'required|in:pending,in_progress,completed',
-            'priority' => 'nullable|integer',
+            'status' => 'required|in:todo,in_progress,completed',
+            'priority' => 'required|in:low,medium,high',
+            'due_date' => 'nullable|date',
         ]);
 
         $task = $project->tasks()->create([
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'status' => $validated['status'],
-            'priority' => $validated['priority'] ?? 0,
+            'priority' => $validated['priority'],
+            'due_date' => $validated['due_date'] ?? null,
             'user_id' => auth()->id(),
         ]);
 
@@ -43,8 +45,9 @@ class TaskController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'required|in:pending,in_progress,completed',
-            'priority' => 'nullable|integer',
+            'status' => 'required|in:todo,in_progress,completed',
+            'priority' => 'required|in:low,medium,high',
+            'due_date' => 'nullable|date',
         ]);
 
         $task->update($validated);

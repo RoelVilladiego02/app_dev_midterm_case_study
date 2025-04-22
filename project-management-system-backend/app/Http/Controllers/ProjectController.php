@@ -18,13 +18,17 @@ class ProjectController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'deadline' => 'nullable|date',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'required|in:pending,in_progress,completed',
         ]);
 
         $project = Project::create([
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
-            'deadline' => $validated['deadline'] ?? null,
+            'start_date' => $validated['start_date'] ?? null,
+            'end_date' => $validated['end_date'] ?? null,
+            'status' => $validated['status'],
             'user_id' => auth()->id(),
         ]);
 
@@ -42,9 +46,11 @@ class ProjectController extends Controller
         $project = Project::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
 
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'deadline' => 'nullable|date',
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'status' => 'required|in:pending,in_progress,completed',
         ]);
 
         $project->update($validated);

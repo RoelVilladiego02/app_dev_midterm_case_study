@@ -2,26 +2,27 @@
   padding: 2.5rem;
   max-width: 1200px;
   margin: 0 auto;
-  background-color: #f5f7f9;
+  background-color: #f8f9fa;
 }
 
 .gridContainer {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2.5rem;
-  margin-top: 2.5rem;
+  gap: 2rem;
+  margin-top: 2rem;
 }
 
 .section {
   background: white;
-  border-radius: 10px;
-  padding: 1.75rem;
+  border-radius: 8px;
+  padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .section:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .sectionHeader {
@@ -38,7 +39,8 @@
   padding: 0.6rem 1.2rem;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
 }
 
 .addButton:hover {
@@ -63,15 +65,60 @@
 }
 
 .logoutButton {
-  padding: 10px 20px;
-  background-color: #e63946;
+  padding: 0.6rem 1.2rem;
+  background-color: #dc3545;
   color: white;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
 }
 
 .logoutButton:hover {
-  background-color: #d62f3d;
+  background-color: #c82333;
+}
+
+.projectItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  background-color: #fff;
+  transition: border-color 0.2s ease;
+}
+
+.projectItem:hover {
+  border-color: #adb5bd;
+}
+
+.projectActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.projectActions button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #0066cc;
+  color: white;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
+}
+
+.projectActions button:hover {
+  background-color: #0052a3;
+}
+
+.projectActions button:nth-child(3) {
+  background-color: #dc3545;
+}
+
+.projectActions button:nth-child(3):hover {
+  background-color: #c82333;
 }

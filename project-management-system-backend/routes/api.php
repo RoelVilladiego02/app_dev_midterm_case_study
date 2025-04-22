@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +36,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{project}/tasks', [TaskController::class, 'store']);
     Route::put('projects/{project}/tasks/{task}', [TaskController::class, 'update']);
     Route::delete('projects/{project}/tasks/{task}', [TaskController::class, 'destroy']);
+
+    // User routes
+    Route::get('/users', [UserController::class, 'index'])->middleware('auth:sanctum');
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

@@ -46,6 +46,8 @@ export const login = async (email, password) => {
             const { token, user } = response.data;
             localStorage.setItem('auth_token', token);
             localStorage.setItem('user', JSON.stringify(user));
+            
+            // Set authorization header for future requests
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             return response.data;
         }
