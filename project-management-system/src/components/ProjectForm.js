@@ -7,7 +7,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
   const [description, setDescription] = useState(initialData.description || '');
   const [startDate, setStartDate] = useState(initialData.start_date || '');
   const [endDate, setEndDate] = useState(initialData.end_date || '');
-  const [status, setStatus] = useState(initialData.status || 'pending');
+  const [status, setStatus] = useState(initialData.status || 'pending'); // Default to 'pending'
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
@@ -24,7 +24,13 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit({ title, description, start_date: startDate, end_date: endDate, status });
+      onSubmit({
+        title, // Use 'title' instead of 'name'
+        description,
+        start_date: startDate,
+        end_date: endDate,
+        status,
+      });
     }
   };
 
@@ -71,7 +77,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
 
       <div className={styles.formGroup}>
         <label>Status</label>
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
+        <select value={status} onChange={(e) => setStatus(e.target.value)} disabled>
           <option value="pending">Pending</option>
           <option value="in_progress">In Progress</option>
           <option value="completed">Completed</option>

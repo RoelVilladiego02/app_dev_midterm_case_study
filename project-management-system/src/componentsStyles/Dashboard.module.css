@@ -122,3 +122,38 @@
 .projectActions button:nth-child(3):hover {
   background-color: #c82333;
 }
+
+.projectMeta {
+  color: #6c757d;
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
+.status {
+  font-weight: 500;
+  margin-top: 0.5rem;
+}
+
+.status.pending {
+  color: #856404;
+  background-color: #fff3cd;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.status.in_progress {
+  color: #055160;
+  background-color: #cff4fc;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.status.completed {
+  color: #0f5132;
+  background-color: #d1e7dd;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  display: inline-block;
+}

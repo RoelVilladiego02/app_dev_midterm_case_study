@@ -13,21 +13,12 @@ const CreateProject = () => {
     setIsLoading(true);
     setError('');
     try {
-      console.log('Creating project with data:', projectData);
-      const result = await createProject(projectData);
-      console.log('Project created successfully:', result);
+      console.log('Creating project with data:', { ...projectData, status: 'pending' }); // Log the payload being sent
+      await createProject({ ...projectData, status: 'pending' }); // Ensure 'status' is set to 'pending'
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to create project:', err);
-      
-      // Better error display
-      if (typeof err === 'string') {
-        setError(err);
-      } else if (err.message) {
-        setError(err.message);
-      } else {
-        setError('Failed to create project. Please try again.');
-      }
+      setError(err.message || 'Failed to create project. Please try again.');
     } finally {
       setIsLoading(false);
     }

@@ -28,6 +28,7 @@ export const fetchProjects = async () => {
 export const createProject = async (projectData) => {
   setupAuthHeader();
   try {
+    console.log('Creating project with data:', projectData); // Log the payload
     const response = await axios.post(`${API_URL}/api/projects`, projectData, {
       headers: {
         'Content-Type': 'application/json',
@@ -42,12 +43,18 @@ export const createProject = async (projectData) => {
 
 export const updateProject = async (projectId, projectData) => {
   setupAuthHeader();
-  const response = await axios.put(`${API_URL}/api/projects/${projectId}`, projectData, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-  return response.data;
+  try {
+    console.log('Updating project with data:', projectData); // Log the payload
+    const response = await axios.put(`${API_URL}/api/projects/${projectId}`, projectData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error in updateProject:', error.response || error); // Log error details
+    throw error.response?.data || error;
+  }
 };
 
 export const deleteProject = async (projectId) => {

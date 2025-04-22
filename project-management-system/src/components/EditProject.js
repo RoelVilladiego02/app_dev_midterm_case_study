@@ -35,11 +35,12 @@ const EditProject = () => {
     setIsLoading(true);
     setError('');
     try {
-      await updateProject(projectId, projectData);
+      console.log('Updating project with data:', projectData); // Log the payload being sent
+      await updateProject(projectId, projectData); // Ensure 'title' is sent
       navigate('/dashboard');
     } catch (err) {
-      console.error('Failed to update project:', err);
-      setError('Failed to update project. Please try again.');
+      console.error('Failed to update project:', err); // Log the error details
+      setError(err.message || 'Failed to update project. Please try again.');
     } finally {
       setIsLoading(false);
     }

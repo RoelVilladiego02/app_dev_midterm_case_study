@@ -92,11 +92,19 @@ const Dashboard = () => {
                   <div className={styles.projectInfo} onClick={() => handleViewProject(project.id)}>
                     <h3>{project.title}</h3>
                     {project.description && <p>{project.description}</p>}
-                    {project.deadline && (
-                      <p className={styles.deadline}>
-                        Due: {new Date(project.deadline).toLocaleDateString()}
+                    {project.start_date && (
+                      <p className={styles.projectMeta}>
+                        Start Date: {new Date(project.start_date).toLocaleDateString()}
                       </p>
                     )}
+                    {project.end_date && (
+                      <p className={styles.projectMeta}>
+                        End Date: {new Date(project.end_date).toLocaleDateString()}
+                      </p>
+                    )}
+                    <p className={`${styles.status} ${styles[project.status]}`}>
+                      Status: {project.status.replace('_', ' ')}
+                    </p>
                   </div>
                   <div className={styles.projectActions}>
                     <button onClick={(e) => {
