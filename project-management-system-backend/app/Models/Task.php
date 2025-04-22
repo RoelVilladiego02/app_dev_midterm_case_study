@@ -12,11 +12,10 @@ class Task extends Model
     protected $fillable = [
         'title',
         'description',
+        'status',
+        'priority',
         'project_id',
         'user_id',
-        'priority',
-        'status',
-        'due_date'
     ];
 
     public function project()

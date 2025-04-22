@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\TaskController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,6 +26,15 @@ Route::post('/login', [LoginController::class, 'login']);
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LogoutController::class, 'logout']);
+
+    // Project routes
+    Route::apiResource('projects', ProjectController::class);
+
+    // Task routes (nested under projects)
+    Route::get('projects/{project}/tasks', [TaskController::class, 'index']);
+    Route::post('projects/{project}/tasks', [TaskController::class, 'store']);
+    Route::put('projects/{project}/tasks/{task}', [TaskController::class, 'update']);
+    Route::delete('projects/{project}/tasks/{task}', [TaskController::class, 'destroy']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

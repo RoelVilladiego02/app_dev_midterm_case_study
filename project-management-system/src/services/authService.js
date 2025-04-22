@@ -18,8 +18,12 @@ const setupCSRF = async () => {
             }
         });
     } catch (error) {
-        console.error('CSRF cookie error:', error);
-        throw new Error('Failed to setup CSRF protection');
+        if (error.response?.status === 404) {
+            console.warn('CSRF cookie endpoint not found. Skipping CSRF setup.');
+        } else {
+            console.error('CSRF cookie error:', error);
+            throw new Error('Failed to setup CSRF protection');
+        }
     }
 };
 
