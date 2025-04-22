@@ -130,6 +130,16 @@
   font-weight: 500;
 }
 
+.dueDate {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.assignee {
+  color: #495057;
+  font-weight: 500;
+}
+
 .taskActions {
   display: flex;
   gap: 0.5rem;

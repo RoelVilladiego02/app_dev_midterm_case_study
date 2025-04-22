@@ -101,11 +101,16 @@ const ProjectView = () => {
                     <span className={`${styles.status} ${styles[task.status]}`}>
                       {task.status.replace('_', ' ')}
                     </span>
-                    {task.priority > 0 && (
-                      <span className={styles.priority}>Priority: {task.priority}</span>
+                    <span className={styles.priority}>Priority: {task.priority}</span>
+                    {task.due_date && (
+                      <span className={styles.dueDate}>
+                        Due Date: {new Date(task.due_date).toLocaleDateString()}
+                      </span>
                     )}
                     {task.assigned_user && (
-                      <span className={styles.assignee}>Assigned to: {task.assigned_user.name}</span>
+                      <span className={styles.assignee}>
+                        Assigned to: {task.assigned_user.name}
+                      </span>
                     )}
                   </div>
                 </div>
