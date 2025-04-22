@@ -46,7 +46,7 @@ class ProjectController extends Controller
         $project = Project::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
