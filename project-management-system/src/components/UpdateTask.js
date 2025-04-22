@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TaskForm from './TaskForm';
 import { fetchTasks, updateTask } from '../services/projectService';
+import styles from '../componentsStyles/EditProject.module.css';
 
 const UpdateTask = () => {
   const [task, setTask] = useState(null);
@@ -10,7 +11,7 @@ const UpdateTask = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { projectId, taskId } = useParams();
-  
+
   const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
   useEffect(() => {
@@ -19,13 +20,13 @@ const UpdateTask = () => {
         // Fetch task data
         const tasksResponse = await fetchTasks(projectId);
         const currentTask = tasksResponse.find(task => task.id.toString() === taskId);
-        
+
         if (!currentTask) {
           throw new Error('Task not found');
         }
-        
+
         setTask(currentTask);
-        
+
         // Fetch users
         const usersResponse = await fetch(`${API_URL}/api/users`, {
           headers: {
@@ -33,11 +34,11 @@ const UpdateTask = () => {
             'Accept': 'application/json',
           }
         });
-        
+
         if (!usersResponse.ok) {
           throw new Error('Failed to fetch users');
         }
-        
+
         const usersData = await usersResponse.json();
         setUsers(usersData);
       } catch (err) {
@@ -45,7 +46,7 @@ const UpdateTask = () => {
         setError('Failed to load data. Please try again.');
       }
     };
-    
+
     fetchData();
   }, [projectId, taskId, API_URL]);
 
@@ -73,9 +74,17 @@ const UpdateTask = () => {
   if (!task) return <p>Loading...</p>;
 
   return (
-    <div>
-      <h1>Update Task</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1>Update Task</h1>
+        <button
+          onClick={() => navigate(`/projects/${projectId}`)}
+          className={styles.backButton}
+        >
+          Cancel Edit
+        </button>
+      </div>
+      {error && <p className={styles.error}>{error}</p>}
       <TaskForm
         initialData={{
           ...task,
