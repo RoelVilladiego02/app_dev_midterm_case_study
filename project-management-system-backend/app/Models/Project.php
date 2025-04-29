@@ -16,6 +16,8 @@ class Project extends Model
         'start_date',
         'end_date',
         'status',
+        'total_budget',
+        'actual_expenditure',
     ];
 
     public function user()
@@ -38,5 +40,15 @@ class Project extends Model
     public function team()
     {
         return $this->teamMembers();
+    }
+
+    public function getRemainingBudgetAttribute()
+    {
+        return $this->total_budget - $this->actual_expenditure;
+    }
+
+    public function canAddExpenditure($amount)
+    {
+        return ($this->actual_expenditure + $amount) <= $this->total_budget;
     }
 }

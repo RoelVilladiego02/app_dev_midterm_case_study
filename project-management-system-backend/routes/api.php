@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProjectBudgetController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -37,6 +38,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/projects/{project}', [ProjectController::class, 'update']);
     Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
     
+    // Budget management routes
+    Route::get('/projects/{project}/budget', [ProjectBudgetController::class, 'getBudget']);
+    Route::put('/projects/{project}/budget', [ProjectBudgetController::class, 'updateBudget']);
+    Route::post('/projects/{project}/expenditures', [ProjectBudgetController::class, 'addExpenditure']);
+
     // Task routes
     Route::get('/projects/{project}/tasks', [TaskController::class, 'index']);
     Route::post('/projects/{project}/tasks', [TaskController::class, 'store']);
