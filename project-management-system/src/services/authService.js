@@ -28,34 +28,35 @@ const setupCSRF = async () => {
 };
 
 export const login = async (email, password) => {
-    try {
-        await setupCSRF();
-        const response = await axios.post(`${API_URL}/api/login`, {
-            email,
-            password
-        }, {
-            withCredentials: true,
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
+  try {
+    await setupCSRF();
+    const response = await axios.post(`${API_URL}/api/login`, {
+      email,
+      password
+    }, {
+      withCredentials: true,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
 
-        if (response.data.token) {
-            const { token, user } = response.data;
-            localStorage.setItem('auth_token', token);
-            localStorage.setItem('user', JSON.stringify(user));
-            
-            // Set authorization header for future requests
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            return response.data;
-        }
-        throw new Error(response.data.message || 'Login failed');
-    } catch (error) {
-        console.error('Login error:', error.response || error);
-        throw error.response?.data?.message || 'Authentication failed';
+    if (response.data.token) {
+      const { token, user } = response.data;
+      localStorage.setItem('auth_token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
+      // Set token in axios defaults immediately
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      console.log('Auth token set:', token);
+      return response.data;
     }
+    throw new Error(response.data.message || 'Login failed');
+  } catch (error) {
+    console.error('Login error:', error.response || error);
+    throw error.response?.data?.message || 'Authentication failed';
+  }
 };
 
 export const register = async (name, email, password) => {

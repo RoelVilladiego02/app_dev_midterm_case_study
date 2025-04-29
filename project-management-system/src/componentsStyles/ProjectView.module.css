@@ -9,7 +9,7 @@
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 2rem;
 }
 
@@ -45,8 +45,52 @@
   background-color: #0052a3;
 }
 
+/* Team section styles */
+.teamSection {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.teamList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.teamMember {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #e9ecef;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  min-width: 200px;
+}
+
+.removeButton {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 0.3rem 0.7rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: background-color 0.2s ease;
+}
+
+.removeButton:hover {
+  background-color: #c82333;
+}
+
+/* Tasks section styles */
 .tasksSection {
-  margin-top: 2rem;
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .sectionHeader {
@@ -80,11 +124,10 @@
 .taskItem {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: white;
+  padding: 1.2rem;
+  background: #f8f9fa;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -97,10 +140,21 @@
   flex: 1;
 }
 
+.taskContent h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #212529;
+}
+
+.taskContent p {
+  color: #495057;
+  margin-bottom: 1rem;
+}
+
 .taskMeta {
-  margin-top: 0.5rem;
   display: flex;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.7rem;
   font-size: 0.875rem;
 }
 
@@ -132,30 +186,67 @@
 
 .dueDate {
   color: #6c757d;
-  font-size: 0.875rem;
 }
 
-.assignee {
-  color: #495057;
+/* New style for assigned user */
+.assignedUser {
+  background-color: #e2e3fe;
+  color: #4f46e5;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
   font-weight: 500;
 }
 
 .taskActions {
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
+  margin-left: 1rem;
 }
 
 .taskActions button {
-  padding: 0.5rem 1rem;
-  border: none;
+  padding: 0.4rem 0.8rem;
   border-radius: 4px;
+  border: none;
   cursor: pointer;
-  background-color: #0066cc;
-  color: white;
   transition: background-color 0.2s ease;
   font-weight: 500;
+  min-width: 100px;
 }
 
-.taskActions button:hover {
-  background-color: #0052a3;
+.assignButton {
+  background-color: #6c757d;
+  color: white;
+}
+
+.assignButton:hover {
+  background-color: #5a6268;
+}
+
+.editTaskButton {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.editTaskButton:hover {
+  background-color: #0b5ed7;
+}
+
+.deleteButton {
+  background-color: #dc3545;
+  color: white;
+}
+
+.deleteButton:hover {
+  background-color: #bb2d3b;
+}
+
+.loadingState,
+.errorState,
+.notFound,
+.emptyState {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.1rem;
+  color: #6c757d;
 }

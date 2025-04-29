@@ -1,0 +1,132 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 2rem;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+}
+
+.headerLeft h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.welcomeText {
+  margin: 0.5rem 0 0;
+  color: #666;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.notifications {
+  position: relative;
+}
+
+.notificationButton {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  position: relative;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.notificationBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  background: #ff4444;
+  color: white;
+  border-radius: 50%;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  min-width: 18px;
+}
+
+.notificationDropdown {
+  position: absolute;
+  right: 0;
+  top: 120%;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 4px;
+  width: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.notificationHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.notificationHeader h3 {
+  margin: 0;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+}
+
+.notificationList {
+  padding: 0;
+}
+
+.notificationItem {
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.unread {
+  background-color: #f8f9fa;
+}
+
+.notificationActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.acceptButton, .declineButton {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.acceptButton {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.declineButton {
+  background-color: #f44336;
+  color: white;
+}
+
+.loadingState, .emptyState {
+  padding: 1rem;
+  text-align: center;
+  color: #666;
+}

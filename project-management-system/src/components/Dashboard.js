@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../componentsStyles/Dashboard.module.css';
-import LogoutButton from './LogoutButton';
+import Header from './Header';
 import { fetchProjects, deleteProject } from '../services/projectService';
 
 const Dashboard = () => {
@@ -62,24 +62,25 @@ const Dashboard = () => {
     }
   };
 
-  return (
-    <div className={styles.dashboard}>
-      <div className={styles.header}>
-        <div>
-          <h1>Dashboard</h1>
-          {user && <p className={styles.welcome}>Welcome, {user.name}</p>}
-        </div>
-        <LogoutButton />
-      </div>
+  const isProjectOwner = (project) => {
+    const currentUser = JSON.parse(localStorage.getItem('user'));
+    return project.user_id === currentUser.id;
+  };
 
+  return (
+    <div className={styles.dashboardContainer}>
+      <Header user={user} />
+      
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
-        <p>Loading...</p>
+        <div className={styles.loadingContainer}>
+          <p>Loading...</p>
+        </div>
       ) : (
         <div className={styles.section}>
           <div className={styles.sectionHeader}>
-            <h2>My Projects</h2>
+            <h2>Projects</h2>
             <button className={styles.addButton} onClick={handleAddProject}>
               Add Project
             </button>
@@ -90,7 +91,12 @@ const Dashboard = () => {
               {projects.map(project => (
                 <div key={project.id} className={styles.projectItem}>
                   <div className={styles.projectInfo} onClick={() => handleViewProject(project.id)}>
-                    <h3>{project.title}</h3>
+                    <div className={styles.projectHeader}>
+                      <h3>{project.title}</h3>
+                      <span className={styles.projectRole}>
+                        {isProjectOwner(project) ? '(Owner)' : '(Team Member)'}
+                      </span>
+                    </div>
                     {project.description && <p>{project.description}</p>}
                     {project.start_date && (
                       <p className={styles.projectMeta}>
@@ -106,22 +112,24 @@ const Dashboard = () => {
                       Status: {project.status.replace('_', ' ')}
                     </p>
                   </div>
-                  <div className={styles.projectActions}>
-                    <button onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditProject(project.id);
-                    }}>Edit</button>
-                    <button onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteProject(project.id);
-                    }}>Delete</button>
-                  </div>
+                  {isProjectOwner(project) && (
+                    <div className={styles.projectActions}>
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditProject(project.id);
+                      }}>Edit</button>
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteProject(project.id);
+                      }}>Delete</button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
             <div className={styles.placeholder}>
-              <p>No projects yet. Create your first project!</p>
+              <p>No projects yet.</p>
             </div>
           )}
         </div>

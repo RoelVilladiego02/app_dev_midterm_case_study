@@ -29,9 +29,26 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit({ title, description, assignee, status, priority, due_date: dueDate });
+      const formData = {
+        title,
+        description,
+        assignee: parseInt(assignee), // Ensure assignee is a number
+        status,
+        priority,
+        due_date: dueDate
+      };
+      console.log('Submitting task with data:', formData);
+      onSubmit(formData);
     }
   };
+
+  if (users.length === 0) {
+    return (
+      <div className={styles.formError}>
+        <p>No team members available. Please add team members to the project first.</p>
+      </div>
+    );
+  }
 
   return (
     <form className={styles.taskForm} onSubmit={handleSubmit}>

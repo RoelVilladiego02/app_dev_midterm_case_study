@@ -1,69 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import TaskForm from './TaskForm';
-import { createTask } from '../services/projectService';
+import { createTask, fetchTeamMembers } from '../services/projectService';
+import styles from '../componentsStyles/CreateProject.module.css';
 
 const CreateTask = () => {
-  const [users, setUsers] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { projectId } = useParams();
-  
-  const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchProjectTeam = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/users`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-            'Accept': 'application/json',
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch users');
-        }
-        
-        const data = await response.json();
-        setUsers(data);
+        const members = await fetchTeamMembers(projectId);
+        setTeamMembers(members);
       } catch (err) {
-        console.error('Failed to fetch users:', err);
-        setError('Failed to load users. Please try again.');
+        console.error('Failed to fetch team members:', err);
+        setError('Failed to load team members. Please try again.');
       }
     };
     
-    fetchUsers();
-  }, [API_URL]);
+    fetchProjectTeam();
+  }, [projectId]);
 
   const handleSubmit = async (taskData) => {
     setIsLoading(true);
     setError('');
     try {
+      console.log('Creating task with data:', taskData);
       await createTask(projectId, {
         title: taskData.title,
-        description: taskData.description,
-        status: taskData.status,
+        description: taskData.description || '',
+        status: 'todo',
         priority: taskData.priority,
-        due_date: taskData.due_date,
-        user_id: taskData.assignee, // Map the assignee field to user_id
+        due_date: taskData.due_date || null,
+        assigned_to: parseInt(taskData.assignee), // Ensure assignee is sent as assigned_to
       });
       navigate(`/projects/${projectId}`);
     } catch (err) {
-      setError('Failed to create task. Please try again.');
-      console.error(err);
+      console.error('Task creation error:', err);
+      setError(err.message || 'Failed to create task. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div>
-      <h1>Create Task</h1>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <h1>Create Task</h1>
+        <button
+          onClick={() => navigate(`/projects/${projectId}`)}
+          className={styles.backButton}
+        >
+          Back to Project
+        </button>
+      </div>
+      {error && <p className={styles.error}>{error}</p>}
       <TaskForm 
-        users={users} 
+        users={teamMembers} 
         onSubmit={handleSubmit} 
         isLoading={isLoading} 
       />
