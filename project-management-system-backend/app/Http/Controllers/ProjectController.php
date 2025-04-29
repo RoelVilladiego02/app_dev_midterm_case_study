@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Project;
+use App\Models\User;
 
 class ProjectController extends Controller
 {
@@ -62,5 +63,62 @@ class ProjectController extends Controller
         $project = Project::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
         $project->delete();
         return response()->json(['message' => 'Project deleted successfully']);
+    }
+
+    public function teamMembers($id)
+    {
+        $project = Project::findOrFail($id);
+        return response()->json($project->teamMembers);
+    }
+
+    public function addTeamMember(Request $request, $id)
+    {
+        $project = Project::findOrFail($id);
+        
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id'
+        ]);
+
+        // Check if user is already a team member
+        if ($project->teamMembers()->where('user_id', $validated['user_id'])->exists()) {
+            return response()->json([
+                'message' => 'User is already a team member'
+            ], 409);
+        }
+
+        try {
+            $project->teamMembers()->attach($validated['user_id']);
+            return response()->json(['message' => 'Team member added successfully']);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to add team member',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function removeTeamMember($id, $userId)
+    {
+        $project = Project::findOrFail($id);
+        $project->teamMembers()->detach($userId);
+        return response()->json(['message' => 'Team member removed successfully']);
+    }
+
+    public function getAllProjects()
+    {
+        $user = auth()->user();
+        
+        // Get projects owned by user
+        $ownedProjects = $user->projects;
+        
+        // Get projects where user is a team member
+        $teamProjects = Project::whereHas('teamMembers', function($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })->get();
+        
+        // Merge and return unique projects
+        return response()->json(
+            $ownedProjects->merge($teamProjects)->unique('id')->values()
+        );
     }
 }

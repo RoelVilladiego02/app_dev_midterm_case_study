@@ -8,6 +8,8 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\TeamInvitationController;
+use App\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,21 +31,36 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LogoutController::class, 'logout']);
 
     // Project routes
-    Route::apiResource('projects', ProjectController::class);
-
-    // Task routes (nested under projects)
-    Route::get('projects/{project}/tasks', [TaskController::class, 'index']);
-    Route::post('projects/{project}/tasks', [TaskController::class, 'store']);
-    Route::put('projects/{project}/tasks/{task}', [TaskController::class, 'update']);
-    Route::delete('projects/{project}/tasks/{task}', [TaskController::class, 'destroy']);
-
+    Route::get('/projects/all', [ProjectController::class, 'index']);
+    Route::post('/projects', [ProjectController::class, 'store']);
+    Route::get('/projects/{project}', [ProjectController::class, 'show']);
+    Route::put('/projects/{project}', [ProjectController::class, 'update']);
+    Route::delete('/projects/{project}', [ProjectController::class, 'destroy']);
+    
+    // Task routes
+    Route::get('/projects/{project}/tasks', [TaskController::class, 'index']);
+    Route::post('/projects/{project}/tasks', [TaskController::class, 'store']);
+    Route::get('/projects/{project}/tasks/{task}', [TaskController::class, 'show']);
+    Route::put('/projects/{project}/tasks/{task}', [TaskController::class, 'update']);
+    Route::delete('/projects/{project}/tasks/{task}', [TaskController::class, 'destroy']);
+    
     // Task assignment routes
-    Route::post('projects/{project}/tasks/{task}/assign', [TaskController::class, 'assignUser']);
-    Route::delete('projects/{project}/tasks/{task}/users/{user}', [TaskController::class, 'unassignUser']);
-    Route::get('projects/{project}/tasks/{task}/users', [TaskController::class, 'assignedUsers']);
+    Route::post('/projects/{project}/tasks/{task}/assign', [TaskController::class, 'assignUser']);
+    Route::delete('/projects/{project}/tasks/{task}/unassign/{user}', [TaskController::class, 'unassignUser']);
+    Route::get('/projects/{project}/tasks/{task}/users', [TaskController::class, 'assignedUsers']);
+    
+    // Team routes
+    Route::get('/projects/{project}/team', [ProjectController::class, 'teamMembers']);
+    Route::post('/projects/{project}/team', [ProjectController::class, 'addTeamMember']);
+    Route::delete('/projects/{project}/team/{user}', [ProjectController::class, 'removeTeamMember']);
 
-    // User routes
-    Route::get('/users', [UserController::class, 'index'])->middleware('auth:sanctum');
+    // Team invitation routes
+    Route::post('projects/{project}/invitations', [TeamInvitationController::class, 'store']);
+    Route::post('invitations/{invitation}/respond', [TeamInvitationController::class, 'respond']);
+    // Notification routes
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
+    Route::patch('notifications/{id}', [NotificationController::class, 'markAsHandled']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

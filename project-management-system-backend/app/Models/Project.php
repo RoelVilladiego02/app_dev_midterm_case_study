@@ -27,4 +27,16 @@ class Project extends Model
     {
         return $this->hasMany(Task::class);
     }
+
+    // Renamed the function to match what's being used in the controllers
+    public function teamMembers()
+    {
+        return $this->belongsToMany(User::class, 'project_user', 'project_id', 'user_id')->withTimestamps();
+    }
+    
+    // Add an alias method to support the team() calls in TaskController
+    public function team()
+    {
+        return $this->teamMembers();
+    }
 }

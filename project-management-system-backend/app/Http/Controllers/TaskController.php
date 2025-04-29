@@ -67,10 +67,12 @@ class TaskController extends Controller
         $task = Task::where('project_id', $projectId)->findOrFail($taskId);
         $user = User::findOrFail($request->user_id);
 
-        // Validate user belongs to project
-        $projectUsers = $task->project->tasks()->pluck('user_id')->unique();
-        if (!$projectUsers->contains($user->id)) {
-            return response()->json(['message' => 'User is not part of the project'], 403);
+        // Use teamMembers() to match what's in the ProjectController
+        // This now works because we added the team() alias in the Project model
+        $isTeamMember = $task->project->team()->where('user_id', $user->id)->exists();
+        
+        if (!$isTeamMember) {
+            return response()->json(['message' => 'User is not part of the project team'], 403);
         }
 
         $task->assignedUsers()->syncWithoutDetaching([$user->id]);

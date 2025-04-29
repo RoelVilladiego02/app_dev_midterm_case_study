@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Notifications\DatabaseNotification;
 
 class User extends Authenticatable
 {
@@ -39,5 +40,21 @@ class User extends Authenticatable
     public function assignedTasks()
     {
         return $this->belongsToMany(Task::class)->withTimestamps();
+    }
+
+    public function teamInvitations()
+    {
+        return $this->hasMany(TeamInvitation::class, 'recipient_id');
+    }
+
+    public function sentInvitations()
+    {
+        return $this->hasMany(TeamInvitation::class, 'sender_id');
+    }
+
+    public function notifications()
+    {
+        return $this->morphMany(DatabaseNotification::class, 'notifiable')
+            ->orderBy('created_at', 'desc');
     }
 }
