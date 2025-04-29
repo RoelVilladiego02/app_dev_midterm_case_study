@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\Project;
+use App\Models\User;
 
 class TaskController extends Controller
 {
@@ -59,5 +60,33 @@ class TaskController extends Controller
         $task = Task::where('id', $taskId)->where('project_id', $projectId)->firstOrFail();
         $task->delete();
         return response()->json(['message' => 'Task deleted successfully']);
+    }
+
+    public function assignUser(Request $request, $projectId, $taskId)
+    {
+        $task = Task::where('project_id', $projectId)->findOrFail($taskId);
+        $user = User::findOrFail($request->user_id);
+
+        // Validate user belongs to project
+        $projectUsers = $task->project->tasks()->pluck('user_id')->unique();
+        if (!$projectUsers->contains($user->id)) {
+            return response()->json(['message' => 'User is not part of the project'], 403);
+        }
+
+        $task->assignedUsers()->syncWithoutDetaching([$user->id]);
+        return response()->json(['message' => 'User assigned successfully']);
+    }
+
+    public function unassignUser($projectId, $taskId, $userId)
+    {
+        $task = Task::where('project_id', $projectId)->findOrFail($taskId);
+        $task->assignedUsers()->detach($userId);
+        return response()->json(['message' => 'User unassigned successfully']);
+    }
+
+    public function assignedUsers($projectId, $taskId)
+    {
+        $task = Task::where('project_id', $projectId)->findOrFail($taskId);
+        return response()->json($task->assignedUsers);
     }
 }
