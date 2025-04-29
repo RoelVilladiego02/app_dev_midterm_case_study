@@ -12,10 +12,10 @@ const setupAuthHeader = () => {
 export const fetchAllUsers = async () => {
   setupAuthHeader();
   try {
-    const response = await axios.get(`${API_URL}/api/users`);
+    const response = await axios.get(`${API_URL}/api/users/available`);
     return response.data;
   } catch (error) {
-    console.error('Error fetching users:', error);
-    throw error.response?.data?.message || 'Failed to fetch users';
+    console.error('Error fetching available users:', error);
+    throw error.response?.data?.message || 'Failed to fetch available users';
   }
 };

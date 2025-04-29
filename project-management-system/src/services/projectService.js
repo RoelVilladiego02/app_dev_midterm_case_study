@@ -17,16 +17,52 @@ const setupAuthHeader = () => {
 export const fetchProjects = async () => {
   setupAuthHeader();
   try {
-    console.log('Fetching all projects...');
-    const response = await axios.get(`${API_URL}/api/projects/all`);
-    console.log('Projects response:', response.data);
-    return response.data;
+    console.log('Fetching projects with auth token:', localStorage.getItem('auth_token'));
+    
+    // Use the getAllProjects endpoint which returns both owned and team projects
+    const response = await axios.get(`${API_URL}/api/projects/getAllProjects`);
+    
+    if (!response || !response.data) {
+      console.log('No projects found, returning empty array');
+      return [];
+    }
+
+    const projectsData = Array.isArray(response.data) ? response.data : [];
+    console.log('Projects received:', projectsData);
+    
+    const currentUser = JSON.parse(localStorage.getItem('user'));
+    if (!currentUser) {
+      throw new Error('No user data found');
+    }
+
+    const mappedProjects = projectsData.map(project => ({
+      ...project,
+      isOwner: project.user_id === currentUser.id,
+      role: project.user_id === currentUser.id ? 'owner' : 'team_member'
+    }));
+
+    return mappedProjects.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
   } catch (error) {
-    console.error('Error details:', {
+    console.error('Project fetch error:', {
       status: error.response?.status,
-      data: error.response?.data
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      fullError: error
     });
-    throw error.response?.data?.message || 'Failed to fetch projects';
+
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      throw new Error('Session expired. Please login again.');
+    }
+
+    throw new Error(
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to fetch projects. Please check your connection.'
+    );
   }
 };
 
@@ -230,10 +266,13 @@ export const createTask = async (projectId, taskData) => {
     console.log('Task created:', response.data);
     const taskId = response.data.id;
     
-    // If assigned_to is provided, assign the user to the task
-    if (taskData.assigned_to) {
+    // Check for either assignee (from CreateTask.js) or assigned_to (legacy support)
+    const userId = taskData.assignee || taskData.assigned_to;
+    
+    // If a user is assigned, assign them to the task
+    if (userId) {
       try {
-        await assignUserToTask(projectId, taskId, taskData.assigned_to);
+        await assignUserToTask(projectId, taskId, userId);
       } catch (assignError) {
         console.error('Error assigning user during task creation:', assignError);
         // Continue without failing the whole operation
@@ -247,25 +286,28 @@ export const createTask = async (projectId, taskData) => {
   }
 };
 
+export const updateTaskProgress = async (projectId, taskId, percentage) => {
+  setupAuthHeader();
+  try {
+    const response = await axios.put(
+      `${API_URL}/api/projects/${projectId}/tasks/${taskId}/progress`,
+      { completion_percentage: percentage }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Progress update error:', error);
+    throw error.response?.data?.message || 'Failed to update task progress';
+  }
+};
+
 export const updateTask = async (projectId, taskId, taskData) => {
   setupAuthHeader();
   try {
-    console.log('Updating task with data:', taskData);
-    
-    // First update the task details
     const response = await axios.put(
       `${API_URL}/api/projects/${projectId}/tasks/${taskId}`,
       {
-        title: taskData.title,
-        description: taskData.description,
-        status: taskData.status,
-        priority: taskData.priority,
-        due_date: taskData.due_date
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        ...taskData,
+        completion_percentage: taskData.completion_percentage
       }
     );
     
@@ -305,10 +347,55 @@ export const deleteTask = async (projectId, taskId) => {
 export const fetchTeamMembers = async (projectId) => {
   setupAuthHeader();
   try {
+    console.log('Fetching team members for project:', projectId);
+    
+    // First verify the project exists and we have access
+    const project = await fetchSingleProject(projectId);
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    // Return team members from the project data if available
+    if (project.teamMembers && Array.isArray(project.teamMembers)) {
+      console.log('Using team members from project data:', project.teamMembers);
+      return project.teamMembers;
+    }
+
+    // Fallback to separate team members endpoint
     const response = await axios.get(`${API_URL}/api/projects/${projectId}/team`);
-    return response.data;
+    console.log('Team members API response:', response.data);
+
+    if (!response.data) {
+      throw new Error('No team members data received');
+    }
+
+    const validMembers = Array.isArray(response.data) ? response.data : [];
+    if (validMembers.length === 0) {
+      console.warn('No team members found for project:', projectId);
+    }
+
+    return validMembers;
   } catch (error) {
-    throw error.response?.data?.message || 'Failed to fetch team members';
+    console.error('Error fetching team members:', {
+      projectId,
+      error: error.message,
+      response: error.response?.data
+    });
+    
+    // Check for specific error cases
+    if (error.response?.status === 401) {
+      throw new Error('Your session has expired. Please login again.');
+    }
+    
+    if (error.response?.status === 403) {
+      throw new Error('You do not have permission to view team members.');
+    }
+    
+    throw new Error(
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to fetch team members'
+    );
   }
 };
 
@@ -336,40 +423,88 @@ export const removeTeamMember = async (projectId, userId) => {
 export const sendTeamInvitation = async (projectId, userId) => {
   setupAuthHeader();
   try {
-    // First check if user is already a member
-    const teamMembers = await fetchTeamMembers(projectId);
-    if (teamMembers.some(member => member.id === parseInt(userId))) {
-      throw new Error('User is already a team member');
+    console.log('Sending invitation:', { projectId, userId });
+
+    // Validate and parse IDs
+    const parsedProjectId = parseInt(projectId, 10);
+    const parsedUserId = parseInt(userId, 10);
+
+    if (isNaN(parsedProjectId) || isNaN(parsedUserId)) {
+      throw new Error(`Invalid IDs: Project ID ${projectId}, User ID ${userId}`);
     }
 
-    console.log('Sending invitation:', { projectId, userId });
+    // First check if user is already a member
+    try {
+      const teamMembers = await fetchTeamMembers(projectId);
+      if (teamMembers.some(member => member.id === parsedUserId)) {
+        throw new Error('User is already a team member');
+      }
+    } catch (teamCheckError) {
+      console.warn('Team check error:', teamCheckError);
+      // Continue even if the team check fails
+    }
+
+    console.log(`Sending invitation request to: ${API_URL}/api/projects/${parsedProjectId}/invitations`);
+    console.log('With data:', { recipient_id: parsedUserId });
+
+    // Use the correct URL format matching the Laravel route
+    // and send a proper JSON request
     const response = await axios.post(
-      `${API_URL}/api/projects/${projectId}/invitations`,
+      `${API_URL}/api/projects/${parsedProjectId}/invitations`,
       {
-        recipient_id: userId,
-        project_id: projectId
+        recipient_id: parsedUserId
       },
       {
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest'
         }
       }
     );
+
     console.log('Invitation response:', response.data);
+    
+    if (response.data?.message) {
+      // Show success message from server
+      return { success: true, message: response.data.message };
+    }
+
     return response.data;
   } catch (error) {
-    console.error('Invitation error details:', {
-      status: error.response?.status,
-      data: error.response?.data,
-      message: error.response?.data?.message
+    console.error('Invitation error:', {
+      error,
+      request: {
+        projectId,
+        userId,
+        url: `${API_URL}/api/projects/${projectId}/invitations`
+      },
+      response: error.response?.data,
+      status: error.response?.status
     });
-    
-    if (error.response?.status === 409 || 
-        error.response?.data?.message?.includes('Duplicate entry')) {
-      throw new Error('User already has a pending invitation');
+
+    // Provide detailed error messages based on the response
+    if (error.response?.status === 401) {
+      throw new Error('Authentication failed. Please log in again.');
+    } else if (error.response?.status === 403) {
+      throw new Error('You do not have permission to invite users to this project.');
+    } else if (error.response?.status === 409) {
+      throw new Error(error.response.data.message || 'User already has a pending invitation');
+    } else if (error.response?.status === 422) {
+      const validationErrors = error.response.data.errors || {};
+      const firstError = Object.values(validationErrors)[0];
+      throw new Error(firstError ? firstError[0] : 'Validation failed');
+    } else if (error.response?.status === 500) {
+      throw new Error(`Server error: ${error.response.data.message || 'Internal server error'}`);
     }
-    
-    throw new Error(error.response?.data?.message || 'Failed to send invitation');
+
+    // Default error message with more context
+    throw new Error(
+      `Invitation failed (${error.response?.status || 'network error'}): ${
+        error.response?.data?.message || 
+        error.message || 
+        'Failed to send invitation'
+      }`
+    );
   }
 };
 
@@ -415,5 +550,118 @@ export const fetchAssignedUsers = async (projectId, taskId) => {
     }
     
     throw new Error(error.response?.data?.message || 'Failed to fetch assigned users');
+  }
+};
+
+export const updateProjectBudget = async (projectId, budgetData) => {
+  setupAuthHeader();
+  try {
+    const response = await axios.put(
+      `${API_URL}/api/projects/${projectId}/budget`,
+      {
+        total_budget: parseFloat(budgetData.totalBudget),
+        actual_expenditure: parseFloat(budgetData.actualExpenditure)
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Budget update error:', error);
+    const errorMessage = error.response?.data?.errors?.total_budget?.[0] 
+      || error.response?.data?.message 
+      || 'Failed to update budget';
+    throw new Error(errorMessage);
+  }
+};
+
+export const addExpenditure = async (projectId, amount, description) => {
+  setupAuthHeader();
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/projects/${projectId}/budget/expenditure`,
+      { 
+        amount: parseFloat(amount),
+        description,
+        project_id: projectId,
+        date: new Date().toISOString()
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!response.data) {
+      throw new Error('No response from server');
+    }
+
+    console.log('Expenditure added:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Expenditure error:', {
+      status: error.response?.status,
+      message: error.response?.data?.message || error.message
+    });
+    throw new Error(
+      error.response?.data?.message || 
+      'Failed to add expenditure. Please check your budget limits.'
+    );
+  }
+};
+
+export const fetchSingleProject = async (projectId) => {
+  setupAuthHeader();
+  try {
+    console.log('Fetching single project with ID:', projectId);
+    
+    const response = await axios.get(`${API_URL}/api/projects/${projectId}`);
+    console.log('Raw project response:', response);
+    
+    if (!response.data) {
+      throw new Error('Project not found');
+    }
+
+    // Get current user for role determination
+    const currentUser = JSON.parse(localStorage.getItem('user'));
+    if (!currentUser) {
+      throw new Error('No user data found');
+    }
+
+    // Extract project data
+    const projectData = response.data;
+    const isOwner = projectData.user_id === currentUser.id;
+    const isTeamMember = projectData.teamMembers?.some(
+      member => member.id === currentUser.id
+    );
+
+    // Return formatted project data
+    return {
+      ...projectData,
+      isOwner,
+      role: isOwner ? 'owner' : (isTeamMember ? 'team_member' : 'viewer'),
+      teamMembers: projectData.teamMembers || [],
+      tasks: projectData.tasks || [],
+      owner: projectData.owner || null
+    };
+  } catch (error) {
+    console.error('Error fetching project:', {
+      error,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+
+    if (error.response?.status === 403) {
+      throw new Error('You do not have access to this project');
+    }
+
+    if (error.response?.status === 404) {
+      throw new Error('Project not found');
+    }
+
+    throw new Error(
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to fetch project'
+    );
   }
 };

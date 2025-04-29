@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Project;
-use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class ProjectController extends Controller
 {
@@ -38,8 +38,45 @@ class ProjectController extends Controller
 
     public function show($id)
     {
-        $project = Project::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
-        return response()->json($project);
+        try {
+            // Get the project with eager loading
+            $project = Project::with(['teamMembers', 'tasks', 'user'])->findOrFail($id);
+            
+            // Check if user is owner or team member
+            $isTeamMember = $project->teamMembers()->where('user_id', auth()->id())->exists();
+            
+            if ($project->user_id !== auth()->id() && !$isTeamMember) {
+                return response()->json([
+                    'message' => 'You do not have access to this project'
+                ], 403);
+            }
+            
+            // Create a response with additional data
+            $response = [
+                'id' => $project->id,
+                'title' => $project->title,
+                'description' => $project->description,
+                'start_date' => $project->start_date,
+                'end_date' => $project->end_date,
+                'status' => $project->status,
+                'user_id' => $project->user_id,
+                'created_at' => $project->created_at,
+                'updated_at' => $project->updated_at,
+                'total_budget' => $project->total_budget,
+                'actual_expenditure' => $project->actual_expenditure,
+                'teamMembers' => $project->teamMembers,
+                'tasks' => $project->tasks,
+                'owner' => $project->user
+            ];
+            
+            return response()->json($response);
+            
+        } catch (\Exception $e) {
+            Log::error('Project fetch error: ' . $e->getMessage());
+            return response()->json([
+                'message' => 'Project not found'
+            ], 404);
+        }
     }
 
     public function update(Request $request, $id)
@@ -65,7 +102,7 @@ class ProjectController extends Controller
         return response()->json(['message' => 'Project deleted successfully']);
     }
 
-    public function teamMembers($id)
+    public function getTeam($id)
     {
         $project = Project::findOrFail($id);
         return response()->json($project->teamMembers);
@@ -120,5 +157,33 @@ class ProjectController extends Controller
         return response()->json(
             $ownedProjects->merge($teamProjects)->unique('id')->values()
         );
+    }
+
+    public function teamMembers(Project $project)
+    {
+        try {
+            // Check if user has access to the project
+            if ($project->user_id !== auth()->id() && !$project->teamMembers()->where('user_id', auth()->id())->exists()) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+
+            // Get team members with their user information
+            $teamMembers = $project->teamMembers()->with('user')->get();
+
+            return response()->json([
+                'team_members' => $teamMembers,
+                'project_id' => $project->id
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to retrieve team members', [
+                'error' => $e->getMessage(),
+                'project_id' => $project->id
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to retrieve team members',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

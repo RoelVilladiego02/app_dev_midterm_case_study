@@ -7,10 +7,8 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function index()
+    public function getAvailableUsers()
     {
-        // Fetch all users except the authenticated user
-        $users = User::where('id', '!=', auth()->id())->get();
-        return response()->json($users);
+        return User::where('id', '!=', auth()->id())->get();
     }
 }

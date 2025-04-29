@@ -158,6 +158,23 @@
   display: inline-block;
 }
 
+.projectRole {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  margin-left: 0.5rem;
+}
+
+.projectRole.owner {
+  background-color: #198754;
+  color: white;
+}
+
+.projectRole.team_member {
+  background-color: #0dcaf0;
+  color: white;
+}
+
 .mainHeader {
   display: flex;
   justify-content: space-between;

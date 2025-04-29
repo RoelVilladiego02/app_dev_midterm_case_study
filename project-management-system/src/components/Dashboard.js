@@ -12,31 +12,56 @@ const Dashboard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  
-    const loadProjects = async () => {
+    const loadUserAndProjects = async () => {
       setLoading(true);
+      setError('');
+      
       try {
-        console.log('Fetching projects...');
+        // Check for auth token first
         const token = localStorage.getItem('auth_token');
-        console.log('Auth token:', token ? 'Present' : 'Missing');
-        
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        // Load user data
+        const userData = localStorage.getItem('user');
+        if (userData) {
+          setUser(JSON.parse(userData));
+        }
+
+        // Load projects with better error handling
+        console.log('Initiating project fetch...');
         const projectsData = await fetchProjects();
-        console.log('Projects loaded:', projectsData);
-        setProjects(projectsData);
+        
+        // Handle empty projects array gracefully
+        if (!projectsData || projectsData.length === 0) {
+          console.log('No projects found');
+          setProjects([]);
+        } else {
+          console.log(`Successfully loaded ${projectsData.length} projects`);
+          setProjects(projectsData);
+        }
+        
       } catch (err) {
-        console.error('Error fetching projects:', err);
-        setError(`Failed to load projects. ${err.message || 'Please try again.'}`);
+        console.error('Dashboard load error:', err);
+        const errorMessage = err.message === 'Session expired. Please login again.' ?
+          'Your session has expired. Please login again.' :
+          `Failed to load projects: ${err.message}`;
+        
+        setError(errorMessage);
+        
+        if (err.message.includes('Session expired')) {
+          setTimeout(() => {
+            navigate('/login');
+          }, 2000);
+        }
       } finally {
         setLoading(false);
       }
     };
-  
-    loadProjects();
-  }, []);
+
+    loadUserAndProjects();
+  }, [navigate]);
 
   const handleAddProject = () => {
     navigate('/projects/create');
@@ -63,14 +88,12 @@ const Dashboard = () => {
   };
 
   const isProjectOwner = (project) => {
-    const currentUser = JSON.parse(localStorage.getItem('user'));
-    return project.user_id === currentUser.id;
+    return project.isOwner;
   };
 
   return (
     <div className={styles.dashboardContainer}>
       <Header user={user} />
-      
       {error && <p className={styles.error}>{error}</p>}
 
       {loading ? (
@@ -93,8 +116,8 @@ const Dashboard = () => {
                   <div className={styles.projectInfo} onClick={() => handleViewProject(project.id)}>
                     <div className={styles.projectHeader}>
                       <h3>{project.title}</h3>
-                      <span className={styles.projectRole}>
-                        {isProjectOwner(project) ? '(Owner)' : '(Team Member)'}
+                      <span className={`${styles.projectRole} ${styles[project.role]}`}>
+                        {project.role === 'owner' ? '(Owner)' : '(Team Member)'}
                       </span>
                     </div>
                     {project.description && <p>{project.description}</p>}

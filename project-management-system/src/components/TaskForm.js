@@ -9,16 +9,16 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
   const [status, setStatus] = useState(isEditMode ? initialData.status || 'todo' : 'todo');
   const [priority, setPriority] = useState(initialData.priority || 'low');
   const [dueDate, setDueDate] = useState(initialData.due_date || '');
+  const [completionPercentage, setCompletionPercentage] = useState(
+    initialData.completion_percentage || 0
+  );
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
     const newErrors = {};
     if (!title.trim()) newErrors.title = 'Title is required.';
     if (title.length > 255) newErrors.title = 'Title cannot exceed 255 characters.';
-    if (!assignee) newErrors.assignee = 'Assignee is required.';
-    if (!['todo', 'in_progress', 'completed'].includes(status)) {
-      newErrors.status = 'Invalid status.';
-    }
+    if (!assignee) newErrors.assignee = 'Please select a team member to assign this task.';
     if (!['low', 'medium', 'high'].includes(priority)) {
       newErrors.priority = 'Invalid priority.';
     }
@@ -29,20 +29,19 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      const formData = {
+      onSubmit({
         title,
         description,
         assignee: parseInt(assignee), // Ensure assignee is a number
-        status,
+        status: isEditMode ? status : 'todo',
         priority,
-        due_date: dueDate
-      };
-      console.log('Submitting task with data:', formData);
-      onSubmit(formData);
+        due_date: dueDate || null
+      });
     }
   };
 
-  if (users.length === 0) {
+  // Early return if no team members available
+  if (!users || users.length === 0) {
     return (
       <div className={styles.formError}>
         <p>No team members available. Please add team members to the project first.</p>
@@ -126,6 +125,20 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
         />
+      </div>
+
+      <div className={styles.formGroup}>
+        <label>Completion Percentage</label>
+        <div className={styles.rangeGroup}>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={completionPercentage}
+            onChange={(e) => setCompletionPercentage(parseInt(e.target.value))}
+          />
+          <span>{completionPercentage}%</span>
+        </div>
       </div>
 
       <button type="submit" disabled={isLoading}>

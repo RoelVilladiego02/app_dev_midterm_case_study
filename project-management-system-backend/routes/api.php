@@ -31,7 +31,11 @@ Route::post('/login', [LoginController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [LogoutController::class, 'logout']);
 
+    // Add new route for available users
+    Route::get('/users/available', [UserController::class, 'getAvailableUsers']);
+
     // Project routes
+    Route::get('/projects/getAllProjects', [ProjectController::class, 'getAllProjects']);
     Route::get('/projects/all', [ProjectController::class, 'index']);
     Route::post('/projects', [ProjectController::class, 'store']);
     Route::get('/projects/{project}', [ProjectController::class, 'show']);
@@ -41,7 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Budget management routes
     Route::get('/projects/{project}/budget', [ProjectBudgetController::class, 'getBudget']);
     Route::put('/projects/{project}/budget', [ProjectBudgetController::class, 'updateBudget']);
-    Route::post('/projects/{project}/expenditures', [ProjectBudgetController::class, 'addExpenditure']);
+    Route::post('/projects/{project}/budget/expenditure', [ProjectBudgetController::class, 'addExpenditure']);
 
     // Task routes
     Route::get('/projects/{project}/tasks', [TaskController::class, 'index']);
@@ -61,8 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/projects/{project}/team/{user}', [ProjectController::class, 'removeTeamMember']);
 
     // Team invitation routes
-    Route::post('projects/{project}/invitations', [TeamInvitationController::class, 'store']);
-    Route::post('invitations/{invitation}/respond', [TeamInvitationController::class, 'respond']);
+    Route::post('projects/{projectId}/invitations', [TeamInvitationController::class, 'store']);
+    Route::post('invitations/{id}/respond', [TeamInvitationController::class, 'respond']);
     // Notification routes
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
