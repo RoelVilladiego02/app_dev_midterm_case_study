@@ -20,7 +20,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
     if (totalBudget && totalBudget < 0) {
       newErrors.totalBudget = 'Budget cannot be negative.';
     }
-    // Validate status according to Laravel's rules
+    // Add status validation for Laravel's accepted values
     if (initialData.status && !['pending', 'in_progress', 'completed'].includes(initialData.status)) {
       newErrors.status = 'Invalid status value';
     }
@@ -32,12 +32,13 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
     e.preventDefault();
     if (validateForm()) {
       onSubmit({
-        title, // Use 'title' instead of 'name'
+        title,
         description,
         start_date: startDate,
         end_date: endDate,
+        status: initialData.status || 'pending', // Set default status to 'pending'
         total_budget: totalBudget ? parseFloat(totalBudget) : 0,
-        actual_expenditure: 0, // Initialize with 0
+        actual_expenditure: 0,
       });
     }
   };

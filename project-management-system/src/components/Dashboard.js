@@ -3,12 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import styles from '../componentsStyles/Dashboard.module.css';
 import Header from './Header';
 import { fetchProjects, deleteProject } from '../services/projectService';
+import CreateProjectModal from './CreateProjectModal';
+import EditProjectModal from './EditProjectModal';
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,15 +69,36 @@ const Dashboard = () => {
   }, [navigate]);
 
   const handleAddProject = () => {
-    navigate('/projects/create');
+    setShowCreateModal(true);
+  };
+
+  const handleProjectCreated = async () => {
+    try {
+      const projectsData = await fetchProjects();
+      setProjects(projectsData);
+    } catch (err) {
+      console.error('Error refreshing projects:', err);
+      setError('Failed to refresh projects');
+    }
   };
 
   const handleViewProject = (projectId) => {
     navigate(`/projects/${projectId}`);
   };
 
-  const handleEditProject = (projectId) => {
-    navigate(`/projects/${projectId}/edit`);
+  const handleEditProject = (project) => {
+    setSelectedProject(project);
+    setShowEditModal(true);
+  };
+
+  const handleProjectUpdated = async () => {
+    try {
+      const projectsData = await fetchProjects();
+      setProjects(projectsData);
+    } catch (err) {
+      console.error('Error refreshing projects:', err);
+      setError('Failed to refresh projects');
+    }
   };
 
   const handleDeleteProject = async (projectId) => {
@@ -139,7 +165,7 @@ const Dashboard = () => {
                     <div className={styles.projectActions}>
                       <button onClick={(e) => {
                         e.stopPropagation();
-                        handleEditProject(project.id);
+                        handleEditProject(project);
                       }}>Edit</button>
                       <button onClick={(e) => {
                         e.stopPropagation();
@@ -156,6 +182,24 @@ const Dashboard = () => {
             </div>
           )}
         </div>
+      )}
+
+      {showCreateModal && (
+        <CreateProjectModal
+          onClose={() => setShowCreateModal(false)}
+          onProjectCreated={handleProjectCreated}
+        />
+      )}
+
+      {showEditModal && selectedProject && (
+        <EditProjectModal
+          project={selectedProject}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedProject(null);
+          }}
+          onProjectUpdated={handleProjectUpdated}
+        />
       )}
     </div>
   );

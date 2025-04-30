@@ -2,31 +2,52 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background-color: #fff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  padding: 1.25rem 2.5rem;
+  background-color: #94ebfa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .headerLeft {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
 }
 
 .headerLeft h1 {
   margin: 0;
   font-size: 1.5rem;
-  color: #333;
+  color: #2c3e50;
+  font-weight: 600;
 }
 
 .welcomeText {
-  margin: 0.5rem 0 0;
-  color: #666;
+  margin: 0;
+  color: #64748b;
+  font-size: 0.95rem;
 }
 
 .headerRight {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+}
+
+.dashboardLink {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+.dashboardLink:hover {
+  background-color: rgba(37, 99, 235, 0.15);
+  transform: translateY(-1px);
 }
 
 .notifications {
@@ -36,97 +57,102 @@
 .notificationButton {
   background: none;
   border: none;
-  padding: 0.5rem;
+  padding: 0.6rem;
   cursor: pointer;
-  position: relative;
-  font-size: 1.2rem;
-  color: #666;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.notificationButton:hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .notificationBadge {
   position: absolute;
   top: -5px;
   right: -5px;
-  background: #ff4444;
+  background-color: #ef4444;
   color: white;
   border-radius: 50%;
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
 }
 
 .notificationDropdown {
   position: absolute;
   right: 0;
-  top: 120%;
+  top: calc(100% + 10px);
   background: white;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  border-radius: 4px;
-  width: 300px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  width: 320px;
   max-height: 400px;
   overflow-y: auto;
   z-index: 1000;
-}
-
-.notificationHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-}
-
-.notificationHeader h3 {
-  margin: 0;
-}
-
-.closeButton {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: #666;
-}
-
-.notificationList {
-  padding: 0;
+  border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .notificationItem {
   padding: 1rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s;
 }
 
-.unread {
-  background-color: #f8f9fa;
+.notificationItem:hover {
+  background-color: #f8fafc;
+}
+
+.notificationItem:last-child {
+  border-bottom: none;
 }
 
 .notificationActions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
 }
 
 .acceptButton, .declineButton {
   padding: 0.5rem 1rem;
+  border-radius: 6px;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
   font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .acceptButton {
-  background-color: #4CAF50;
+  background-color: #22c55e;
   color: white;
+}
+
+.acceptButton:hover {
+  background-color: #16a34a;
+  transform: translateY(-1px);
 }
 
 .declineButton {
-  background-color: #f44336;
+  background-color: #ef4444;
   color: white;
 }
 
-.loadingState, .emptyState {
+.declineButton:hover {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.loading, .error, .noNotifications {
   padding: 1rem;
   text-align: center;
-  color: #666;
+  color: #64748b;
+}
+
+.error {
+  color: #ef4444;
 }

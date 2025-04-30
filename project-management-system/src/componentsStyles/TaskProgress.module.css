@@ -1,34 +1,45 @@
 .progressContainer {
-  background: white;
-  border-radius: 8px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  text-align: center;
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  margin: 24px 0;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.progressContainer:hover {
+  box-shadow: 0 6px 12px rgba(0,0,0,0.12);
 }
 
 .chartWrapper {
-  max-width: 400px;
+  max-width: 100%;
   margin: 2rem auto;
 }
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.25rem;
   margin-top: 2rem;
 }
 
 .stat {
-  padding: 1rem;
+  padding: 1.25rem;
   background: #f8f9fa;
-  border-radius: 8px;
+  border-radius: 10px;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.stat:hover {
+  transform: translateY(-3px);
+  background: #f0f2f5;
 }
 
 .stat h3 {
   font-size: 0.875rem;
   color: #6c757d;
   margin: 0 0 0.5rem 0;
+  font-weight: 600;
 }
 
 .stat p {
@@ -36,4 +47,353 @@
   font-weight: bold;
   color: #212529;
   margin: 0;
+}
+
+.statistics {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: linear-gradient(to right, #f8f9fa, #e9ecef);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+}
+
+.statItem {
+  text-align: center;
+  padding: 8px 16px;
+  transition: transform 0.2s ease;
+}
+
+.statItem:hover {
+  transform: scale(1.05);
+}
+
+.statLabel {
+  color: #495057;
+  font-size: 0.95em;
+  margin-right: 8px;
+  font-weight: 500;
+}
+
+.statValue {
+  font-weight: 700;
+  color: #212529;
+  font-size: 1.1em;
+}
+
+.ganttContainer {
+  overflow-x: auto;
+  margin-top: 28px;
+  position: relative;
+  border-radius: 8px;
+  border: 1px solid #eaedf0;
+  padding-bottom: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e0 #f8f9fa;
+}
+
+.ganttContainer::-webkit-scrollbar {
+  height: 8px;
+}
+
+.ganttContainer::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.ganttContainer::-webkit-scrollbar-thumb {
+  background-color: #cbd5e0;
+  border-radius: 4px;
+}
+
+.timelineHeader {
+  display: flex;
+  border-bottom: 1px solid #dee2e6;
+  padding: 12px 0;
+  margin-left: 200px;
+  background: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.timelineMark {
+  flex: 1;
+  text-align: center;
+  font-size: 0.85em;
+  color: #495057;
+  font-weight: 500;
+}
+
+.tasksContainer {
+  display: flex;
+  position: relative;
+  margin-top: 0;
+  min-height: 300px;
+}
+
+.taskLabels {
+  width: 200px;
+  flex-shrink: 0;
+  background: #f8f9fa;
+  border-right: 1px solid #dee2e6;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+}
+
+.taskLabel {
+  height: 50px;
+  padding: 14px 12px;
+  border-bottom: 1px solid #eaedf0;
+  font-size: 0.95em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+  font-weight: 500;
+  color: #495057;
+}
+
+.taskLabel:hover {
+  background-color: #e9ecef;
+}
+
+.taskBars {
+  flex-grow: 1;
+  position: relative;
+  background: linear-gradient(to bottom, #fafbfc 0%, #f8f9fa 100%);
+}
+
+.taskBarRow {
+  height: 50px;
+  border-bottom: 1px solid #eaedf0;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+.taskBarRow:hover {
+  background-color: rgba(0,0,0,0.02);
+}
+
+.taskBar {
+  position: absolute;
+  top: 10px;
+  height: 30px;
+  border-radius: 15px;
+  min-width: 30px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.taskBar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+  z-index: 3;
+}
+
+.progressFill {
+  height: 100%;
+  background: rgba(255,255,255,0.35);
+  border-radius: 15px;
+  transition: width 0.5s ease-out;
+}
+
+.taskInfo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 0.85em;
+  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  opacity: 0.9;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.taskBar:hover .taskInfo {
+  opacity: 1;
+}
+
+.today {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: #dc3545;
+  z-index: 1;
+  box-shadow: 0 0 8px rgba(220,53,69,0.5);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.8;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 0.8;
+  }
+}
+
+.weekendHighlight {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: rgba(0,0,0,0.02);
+  z-index: 0;
+}
+
+.taskBarTooltip {
+  position: absolute;
+  background: #343a40;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  z-index: 10;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  max-width: 250px;
+  pointer-events: none;
+}
+
+.taskBar:hover + .taskBarTooltip,
+.taskBarTooltip:hover {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ganttLegend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 8px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  font-size: 0.85em;
+  color: #495057;
+}
+
+.legendColor {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+/* Status color indicators */
+.statusCompleted { background-color: #198754; }
+.statusInProgress { background-color: #0dcaf0; }
+.statusPending { background-color: #6c757d; }
+.statusOverdue { background-color: #dc3545; }
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+  .statistics {
+    flex-wrap: wrap;
+  }
+  
+  .statItem {
+    flex: 1 0 30%;
+    margin: 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .progressContainer {
+    padding: 16px;
+  }
+  
+  .taskLabels {
+    width: 160px;
+  }
+  
+  .timelineHeader {
+    margin-left: 160px;
+  }
+  
+  .taskLabel {
+    font-size: 0.85em;
+  }
+  
+  .statItem {
+    flex: 1 0 45%;
+  }
+}
+
+@media (max-width: 576px) {
+  .statistics {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .statItem {
+    width: 100%;
+    margin: 4px 0;
+    text-align: left;
+  }
+  
+  .taskLabels {
+    width: 120px;
+  }
+  
+  .timelineHeader {
+    margin-left: 120px;
+  }
+  
+  .taskLabel {
+    padding: 12px 8px;
+    font-size: 0.8em;
+  }
+  
+  .taskInfo {
+    font-size: 0.75em;
+  }
+}
+
+/* Print styles */
+@media print {
+  .progressContainer {
+    box-shadow: none;
+    border: 1px solid #dee2e6;
+    margin: 0;
+    page-break-inside: avoid;
+  }
+  
+  .ganttContainer {
+    overflow: visible;
+    border: none;
+  }
+  
+  .taskBar {
+    box-shadow: none;
+    color: #000;
+    border: 1px solid rgba(0,0,0,0.2);
+  }
+  
+  .today {
+    animation: none;
+    box-shadow: none;
+  }
+  
+  .stats {
+    page-break-inside: avoid;
+  }
 }

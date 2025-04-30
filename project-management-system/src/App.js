@@ -3,8 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import Dashboard from './components/Dashboard';
-import CreateProject from './components/CreateProject';
-import EditProject from './components/EditProject';
 import ProjectView from './components/ProjectView';
 import CreateTask from './components/CreateTask';
 import UpdateTask from './components/UpdateTask';
@@ -46,26 +44,10 @@ function App() {
           
           {/* Project routes */}
           <Route
-            path="/projects/create"
-            element={
-              <PrivateRoute>
-                <CreateProject />
-              </PrivateRoute>
-            }
-          />
-          <Route
             path="/projects/:projectId"
             element={
               <PrivateRoute>
                 <ProjectView />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/projects/:projectId/edit"
-            element={
-              <PrivateRoute>
-                <EditProject />
               </PrivateRoute>
             }
           />

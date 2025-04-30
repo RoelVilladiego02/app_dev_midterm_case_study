@@ -1,58 +1,109 @@
 import React from 'react';
-import { Doughnut } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import styles from '../componentsStyles/TaskProgress.module.css';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
-
 const TaskProgress = ({ tasks }) => {
+  // Get timeline boundaries
+  const today = new Date();
+  const allDates = tasks.flatMap(task => [
+    new Date(task.created_at || today),
+    new Date(task.due_date || today)
+  ]);
+  
+  const timelineStart = new Date(Math.min(...allDates));
+  const timelineEnd = new Date(Math.max(...allDates));
+  const totalDays = Math.ceil((timelineEnd - timelineStart) / (1000 * 60 * 60 * 24));
+
+  // Calculate progress statistics
   const totalTasks = tasks.length;
   const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const inProgressTasks = tasks.filter(task => task.status === 'in_progress').length;
-  const todoTasks = tasks.filter(task => task.status === 'todo').length;
 
-  const data = {
-    labels: ['Completed', 'In Progress', 'To Do'],
-    datasets: [
-      {
-        data: [completedTasks, inProgressTasks, todoTasks],
-        backgroundColor: ['#198754', '#0dcaf0', '#6c757d'],
-        borderWidth: 0,
-      },
-    ],
+  // Helper function to get task bar color
+  const getTaskColor = (status) => {
+    switch (status) {
+      case 'completed': return '#198754';
+      case 'in_progress': return '#0dcaf0';
+      default: return '#6c757d';
+    }
   };
 
-  const options = {
-    plugins: {
-      legend: {
-        position: 'bottom',
-      },
-    },
-    cutout: '60%',
+  // Calculate task bar position and width
+  const getTaskPosition = (task) => {
+    const startDate = new Date(task.created_at || today);
+    const endDate = new Date(task.due_date || today);
+    const startOffset = ((startDate - timelineStart) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+    const duration = (endDate - startDate) / (1000 * 60 * 60 * 24) / totalDays * 100;
+    return { left: `${startOffset}%`, width: `${duration}%` };
+  };
+
+  // Generate timeline markers (monthly)
+  const generateTimelineMarkers = () => {
+    const markers = [];
+    let currentDate = new Date(timelineStart);
+    while (currentDate <= timelineEnd) {
+      markers.push(new Date(currentDate));
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    return markers;
   };
 
   return (
     <div className={styles.progressContainer}>
-      <h2>Project Progress</h2>
-      <div className={styles.chartWrapper}>
-        <Doughnut data={data} options={options} />
+      <div className={styles.statistics}>
+        <div className={styles.statItem}>
+          <span className={styles.statLabel}>Total Tasks:</span>
+          <span className={styles.statValue}>{totalTasks}</span>
+        </div>
+        <div className={styles.statItem}>
+          <span className={styles.statLabel}>Completed:</span>
+          <span className={styles.statValue}>{completedTasks}</span>
+        </div>
+        <div className={styles.statItem}>
+          <span className={styles.statLabel}>In Progress:</span>
+          <span className={styles.statValue}>{inProgressTasks}</span>
+        </div>
       </div>
-      <div className={styles.stats}>
-        <div className={styles.stat}>
-          <h3>Total Tasks</h3>
-          <p>{totalTasks}</p>
+
+      <div className={styles.ganttContainer}>
+        <div className={styles.timelineHeader}>
+          {generateTimelineMarkers().map((date, index) => (
+            <div key={index} className={styles.timelineMark}>
+              {date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+            </div>
+          ))}
         </div>
-        <div className={styles.stat}>
-          <h3>Completed</h3>
-          <p>{completedTasks}</p>
-        </div>
-        <div className={styles.stat}>
-          <h3>In Progress</h3>
-          <p>{inProgressTasks}</p>
-        </div>
-        <div className={styles.stat}>
-          <h3>To Do</h3>
-          <p>{todoTasks}</p>
+
+        <div className={styles.tasksContainer}>
+          <div className={styles.taskLabels}>
+            {tasks.map(task => (
+              <div key={task.id} className={styles.taskLabel}>
+                {task.title}
+              </div>
+            ))}
+          </div>
+
+          <div className={styles.taskBars}>
+            <div className={styles.today} style={{ left: `${((today - timelineStart) / (1000 * 60 * 60 * 24)) / totalDays * 100}%` }} />
+            {tasks.map(task => (
+              <div key={task.id} className={styles.taskBarRow}>
+                <div
+                  className={styles.taskBar}
+                  style={{
+                    ...getTaskPosition(task),
+                    backgroundColor: getTaskColor(task.status)
+                  }}
+                >
+                  <div 
+                    className={styles.progressFill}
+                    style={{ width: `${task.completion_percentage || 0}%` }}
+                  />
+                  <span className={styles.taskInfo}>
+                    {task.completion_percentage || 0}% - {task.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

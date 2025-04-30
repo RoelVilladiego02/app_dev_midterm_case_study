@@ -1,9 +1,23 @@
 .budgetDashboard {
+  --primary-color: #0066cc;
+  --success-color: #d1e7dd;
+  --success-text: #0f5132;
+  --danger-color: #f8d7da;
+  --danger-text: #842029;
+  --neutral-color: #f8f9fa;
+  --border-color: #e9ecef;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --transition: all 0.2s ease;
+
   background: white;
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px var(--shadow-color);
+  transition: var(--transition);
 }
 
 .header {
@@ -11,34 +25,47 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .budgetSummary {
   display: grid;
   gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 .budgetItem {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 1rem;
-  background: #f8f9fa;
-  border-radius: 6px;
+  background: var(--neutral-color);
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+}
+
+.budgetItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px var(--shadow-color);
 }
 
 .within-budget {
-  background: #d1e7dd;
-  color: #0f5132;
+  background: var(--success-color);
+  color: var(--success-text);
+  border-left: 4px solid var(--success-text);
 }
 
 .over-budget {
-  background: #f8d7da;
-  color: #842029;
+  background: var(--danger-color);
+  color: var(--danger-text);
+  border-left: 4px solid var(--danger-text);
 }
 
 .budgetForm {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
+  padding: 1rem 0;
 }
 
 .formGroup {
@@ -47,36 +74,125 @@
 }
 
 .formGroup input {
-  padding: 0.5rem;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 1rem;
+  transition: var(--transition);
+}
+
+.formGroup input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.1);
 }
 
 .formActions {
   display: flex;
   gap: 1rem;
   margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
-.editButton, .saveButton {
-  background: #0066cc;
-  color: white;
+.button {
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  font-weight: 500;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+}
+
+.editButton, 
+.saveButton {
+  background: var(--primary-color);
+  color: white;
+}
+
+.editButton:hover,
+.saveButton:hover {
+  background: #0052a3;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .cancelButton {
   background: #6c757d;
   color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
+}
+
+.cancelButton:hover {
+  background: #5a6268;
 }
 
 .error {
-  color: #dc3545;
+  color: var(--danger-text);
   margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: var(--danger-color);
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--danger-text);
+}
+
+.expensesList {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.expensesTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.expensesTable th,
+.expensesTable td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.expensesTable th {
+  background: #f1f3f5;
+  font-weight: 600;
+}
+
+.expensesTable tr:hover {
+  background: #f8f9fa;
+}
+
+.amount {
+  text-align: right;
+  font-family: monospace;
+}
+
+.noExpenses {
+  text-align: center;
+  color: #6c757d;
+  padding: 20px;
+}
+
+@media (max-width: 768px) {
+  .budgetDashboard {
+    padding: 1rem;
+  }
+  
+  .formActions {
+    flex-direction: column;
+  }
+  
+  .button {
+    width: 100%;
+  }
 }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   fetchNotifications, 
   respondToInvitation, 
@@ -9,6 +10,7 @@ import LogoutButton from './LogoutButton';
 import styles from '../componentsStyles/Header.module.css';
 
 const Header = ({ user }) => {
+  const location = useLocation();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -81,6 +83,11 @@ const Header = ({ user }) => {
         {user && <p className={styles.welcomeText}>Welcome, {user.name}</p>}
       </div>
       <div className={styles.headerRight}>
+        {user && location.pathname !== '/dashboard' && (
+          <Link to="/dashboard" className={styles.dashboardLink}>
+            Dashboard
+          </Link>
+        )}
         <div className={styles.notifications}>
           <button 
             className={styles.notificationButton}

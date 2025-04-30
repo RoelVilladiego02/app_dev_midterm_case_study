@@ -1,16 +1,30 @@
-import React, { useState } from 'react';
-import { updateProjectBudget } from '../services/projectService';
+import React, { useState, useEffect, useCallback } from 'react';
+import { updateProjectBudget, fetchProjectExpenses } from '../services/projectService';
 import ExpenseForm from './ExpenseForm';
 import styles from '../componentsStyles/BudgetDashboard.module.css';
 
 const BudgetDashboard = ({ projectId, budget, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [expenses, setExpenses] = useState([]);
   const [newBudget, setNewBudget] = useState({
     totalBudget: parseFloat(budget?.total_budget || 0),
     actualExpenditure: parseFloat(budget?.actual_expenditure || 0)
   });
   const [error, setError] = useState('');
+
+  const loadExpenses = useCallback(async () => {
+    try {
+      const projectExpenses = await fetchProjectExpenses(projectId);
+      setExpenses(projectExpenses);
+    } catch (err) {
+      setError('Failed to load expenses');
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    loadExpenses();
+  }, [loadExpenses]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -119,12 +133,41 @@ const BudgetDashboard = ({ projectId, budget, onUpdate }) => {
           <ExpenseForm 
             projectId={projectId}
             budget={budget}
-            onExpenseAdded={() => {
+            onExpenseAdded={async () => {
               setShowExpenseForm(false);
+              await loadExpenses();
               onUpdate(budget);
             }}
           />
         )}
+
+        <div className={styles.expensesList}>
+          <h3>Expense History</h3>
+          {expenses.length > 0 ? (
+            <table className={styles.expensesTable}>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {expenses.map(expense => (
+                  <tr key={expense.id}>
+                    <td>{new Date(expense.created_at).toLocaleDateString()}</td>
+                    <td>{expense.description}</td>
+                    <td className={styles.amount}>
+                      ${parseFloat(expense.amount).toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className={styles.noExpenses}>No expenses recorded yet.</p>
+          )}
+        </div>
       </div>
     </div>
   );

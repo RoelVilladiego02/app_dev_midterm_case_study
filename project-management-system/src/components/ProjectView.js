@@ -5,7 +5,9 @@ import {
   deleteTask, 
   fetchTeamMembers, 
   removeTeamMember,
-  fetchSingleProject
+  fetchSingleProject,
+  fetchPendingInvitations,
+  cancelTeamInvitation  // Add this import from projectService
 } from '../services/projectService';
 import styles from '../componentsStyles/ProjectView.module.css';
 import Header from './Header';
@@ -13,6 +15,7 @@ import AssignUserModal from './AssignUserModal';
 import TeamMemberModal from './TeamMemberModal';
 import BudgetDashboard from './BudgetDashboard';
 import TaskProgress from './TaskProgress';
+import EditProjectModal from './EditProjectModal';
 
 const ProjectView = () => {
   const [project, setProject] = useState(null);
@@ -28,6 +31,8 @@ const ProjectView = () => {
   const [budget, setBudget] = useState(null);
   const [user, setUser] = useState(null);
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [pendingInvites, setPendingInvites] = useState([]);
 
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -38,41 +43,45 @@ const ProjectView = () => {
         setLoading(true);
         setError('');
         
-        // Load user data first
         const userData = localStorage.getItem('user');
         if (!userData) {
           throw new Error('No user data found');
         }
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
-
-        // Use the fetchSingleProject service
+  
         const projectData = await fetchSingleProject(projectId);
         console.log('Received project data:', projectData);
-
+  
         if (!projectData.isOwner && !projectData.teamMembers?.some(m => m.id === parsedUser.id)) {
           throw new Error('You do not have access to this project');
         }
         
-        // Set project data and roles
         setProject(projectData);
         setIsOwner(projectData.isOwner);
         setTeamMembers(projectData.teamMembers || []);
         
-        // Load tasks if available
         if (projectData.tasks) {
           setTasks(projectData.tasks);
         } else {
           const tasksData = await fetchTasks(projectId);
           setTasks(tasksData);
         }
-
-        // Set budget data
+  
         setBudget({
           total_budget: projectData.total_budget || 0,
           actual_expenditure: projectData.actual_expenditure || 0
         });
-
+  
+        // Always try to fetch pending invites if user is owner
+        if (projectData.isOwner) {
+          const pendingInvitations = await fetchPendingInvitations(projectId);
+          console.log('Pending invitations:', pendingInvitations);
+          setPendingInvites(pendingInvitations.filter(invite => invite?.recipient));
+        } else {
+          setPendingInvites([]);
+        }
+  
       } catch (err) {
         console.error('Error in loadData:', err);
         setError(err.message || 'Failed to load project data. Please try again.');
@@ -89,8 +98,28 @@ const ProjectView = () => {
     
     loadUserAndData();
   }, [projectId, navigate, refreshTimestamp]);
-  
-  // Rest of the component remains the same...
+
+  const handleCancelInvitation = async (invitationId) => {
+    if (window.confirm('Are you sure you want to cancel this invitation?')) {
+      try {
+        await cancelTeamInvitation(invitationId);
+        setPendingInvites(pendingInvites.filter(invite => invite.id !== invitationId));
+        // Show success message
+        setErrorPopup({
+          show: true,
+          message: 'Invitation canceled successfully'
+        });
+        setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
+      } catch (err) {
+        console.error('Error canceling invitation:', err);
+        setErrorPopup({
+          show: true,
+          message: 'Failed to cancel invitation. Please try again.'
+        });
+        setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
+      }
+    }
+  };
   
   const handleAddTask = () => {
     navigate(`/projects/${projectId}/tasks/create`);
@@ -164,6 +193,16 @@ const ProjectView = () => {
     setRefreshTimestamp(Date.now());
   };
 
+  const handleProjectUpdate = async () => {
+    try {
+      const updatedProject = await fetchSingleProject(projectId);
+      setProject(updatedProject);
+    } catch (err) {
+      console.error('Error refreshing project:', err);
+      setError('Failed to refresh project data');
+    }
+  };
+
   if (loading) return <div className={styles.loadingState}>Loading project data...</div>;
   if (error) return <div className={styles.errorState}>{error}</div>;
   if (!project) return <div className={styles.notFound}>Project not found</div>;
@@ -198,15 +237,9 @@ const ProjectView = () => {
             </p>
           </div>
           <div className={styles.actions}>
-            <button 
-              onClick={() => navigate('/dashboard')} 
-              className={styles.backButton}
-            >
-              Back to Dashboard
-            </button>
             {isOwner && (
               <button 
-                onClick={() => navigate(`/projects/${projectId}/edit`)} 
+                onClick={() => setShowEditModal(true)} 
                 className={styles.editButton}
               >
                 Edit Project
@@ -226,40 +259,69 @@ const ProjectView = () => {
           />
         )}
 
-        {/* Team Members Section */}
-        <div className={styles.teamSection}>
-          <div className={styles.sectionHeader}>
-            <h2>Team Members</h2>
-            {isOwner && (
-              <button 
-                onClick={() => setShowTeamModal(true)} 
-                className={styles.addButton}
-              >
-                Add Team Member
-              </button>
-            )}
-          </div>
-          
-          <div className={styles.teamList}>
-            {teamMembers.length > 0 ? (
-              teamMembers.map(member => (
-                <div key={member.id} className={styles.teamMember}>
-                  <span>{member.name}</span>
-                  {isOwner && member.id !== user.id && (
-                    <button 
-                      onClick={() => handleRemoveTeamMember(member.id)}
-                      className={styles.removeButton}
-                    >
-                      Remove
-                    </button>
-                  )}
+         {/* Team Members Section */}
+          <div className={styles.teamSection}>
+            <div className={styles.sectionHeader}>
+              <h2>Team Members</h2>
+              {isOwner && (
+                <button 
+                  onClick={() => setShowTeamModal(true)} 
+                  className={styles.addButton}
+                >
+                  Add Team Member
+                </button>
+              )}
+            </div>
+            
+            <div className={styles.teamList}>
+              {/* Active Members Section */}
+              <div className={styles.activeMembers}>
+                <h3>Active Members</h3>
+                {teamMembers.length > 0 ? (
+                  teamMembers.map(member => (
+                    <div key={member.id} className={styles.teamMember}>
+                      <span>{member.name}</span>
+                      {isOwner && member.id !== user.id && (
+                        <button 
+                          onClick={() => handleRemoveTeamMember(member.id)}
+                          className={styles.removeButton}
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className={styles.emptyState}>No active team members</p>
+                )}
+              </div>
+
+              {/* Pending Invites Section */}
+              {pendingInvites.length > 0 && (
+                <div className={styles.pendingInvites}>
+                  <h3>Pending Invites</h3>
+                  {pendingInvites.map(invite => (
+                    <div key={invite.id} className={styles.pendingMember}>
+                      <div className={styles.memberInfo}>
+                        <span className={styles.memberName}>
+                          {invite.recipient?.name || 'Unknown User'}
+                        </span>
+                        <span className={styles.pendingStatus}>Pending</span>
+                      </div>
+                      {isOwner && (
+                        <button 
+                          onClick={() => handleCancelInvitation(invite.id)}
+                          className={styles.cancelButton}
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))
-            ) : (
-              <p className={styles.emptyState}>No team members yet.</p>
-            )}
+              )}
+            </div>
           </div>
-        </div>
 
         {/* Tasks Section - team members can view but not modify */}
         <div className={styles.tasksSection}>
@@ -349,6 +411,15 @@ const ProjectView = () => {
               const updatedTeam = await fetchTeamMembers(projectId);
               setTeamMembers(updatedTeam);
             }}
+          />
+        )}
+
+        {/* Add the EditProjectModal */}
+        {showEditModal && (
+          <EditProjectModal
+            project={project}
+            onClose={() => setShowEditModal(false)}
+            onProjectUpdated={handleProjectUpdate}
           />
         )}
       </div>

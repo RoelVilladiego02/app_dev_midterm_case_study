@@ -69,10 +69,12 @@ export const fetchProjects = async () => {
 export const createProject = async (projectData) => {
   setupAuthHeader();
   try {
-    // Ensure status is one of the valid values
+    // Ensure status matches Laravel's accepted values
     const validData = {
       ...projectData,
-      status: projectData.status || 'pending'
+      status: projectData.status || 'pending',
+      total_budget: parseFloat(projectData.total_budget) || 0,
+      actual_expenditure: parseFloat(projectData.actual_expenditure) || 0
     };
     
     console.log('Creating project with data:', validData);
@@ -87,12 +89,19 @@ export const createProject = async (projectData) => {
 export const updateProject = async (projectId, projectData) => {
   setupAuthHeader();
   try {
-    // Ensure required fields are present
-    if (!projectData.status) {
-      projectData.status = 'pending';
+    // Ensure status matches Laravel's accepted values
+    const validData = {
+      ...projectData,
+      status: projectData.status || 'pending',
+      total_budget: parseFloat(projectData.total_budget) || 0,
+      actual_expenditure: parseFloat(projectData.actual_expenditure) || 0
+    };
+    
+    if (!['pending', 'in_progress', 'completed'].includes(validData.status)) {
+      throw new Error('Invalid status value');
     }
     
-    const response = await axios.put(`${API_URL}/api/projects/${projectId}`, projectData);
+    const response = await axios.put(`${API_URL}/api/projects/${projectId}`, validData);
     return response.data;
   } catch (error) {
     console.error('Error in updateProject:', error);
@@ -633,40 +642,60 @@ export const fetchSingleProject = async (projectId) => {
     console.log('Fetching single project with ID:', projectId);
     
     const response = await axios.get(`${API_URL}/api/projects/${projectId}`);
-    console.log('Raw project response:', response);
+    console.log('Raw project response:', response.data);
     
     if (!response.data) {
       throw new Error('Project not found');
     }
 
-    // Get current user for role determination
+    // Get current user data
     const currentUser = JSON.parse(localStorage.getItem('user'));
     if (!currentUser) {
       throw new Error('No user data found');
     }
 
-    // Extract project data
+    // Extract project data and ensure all IDs are strings for comparison
     const projectData = response.data;
-    const isOwner = projectData.user_id === currentUser.id;
-    const isTeamMember = projectData.teamMembers?.some(
-      member => member.id === currentUser.id
-    );
+    const currentUserId = String(currentUser.id);
+    const projectUserId = String(projectData.user_id);
+    
+    // Determine ownership and team membership
+    const isOwner = currentUserId === projectUserId;
+    const teamMembers = Array.isArray(projectData.teamMembers) ? projectData.teamMembers : [];
+    const isTeamMember = teamMembers.some(member => String(member?.id) === currentUserId);
+
+    // Log debugging information
+    console.log('Access check:', {
+      currentUserId,
+      projectUserId,
+      isOwner,
+      isTeamMember,
+      teamMembers: teamMembers.map(m => m?.id)
+    });
 
     // Return formatted project data
     return {
       ...projectData,
       isOwner,
       role: isOwner ? 'owner' : (isTeamMember ? 'team_member' : 'viewer'),
-      teamMembers: projectData.teamMembers || [],
-      tasks: projectData.tasks || [],
-      owner: projectData.owner || null
+      teamMembers,
+      tasks: Array.isArray(projectData.tasks) ? projectData.tasks : [],
+      owner: projectData.owner || null,
     };
+
   } catch (error) {
     console.error('Error fetching project:', {
       error,
       status: error.response?.status,
-      data: error.response?.data
+      data: error.response?.data,
+      message: error.message
     });
+
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      throw new Error('Your session has expired. Please login again.');
+    }
 
     if (error.response?.status === 403) {
       throw new Error('You do not have access to this project');
@@ -679,7 +708,89 @@ export const fetchSingleProject = async (projectId) => {
     throw new Error(
       error.response?.data?.message || 
       error.message || 
-      'Failed to fetch project'
+      'Failed to fetch project data'
     );
+  }
+};
+
+export const fetchPendingInvitations = async (projectId) => {
+  setupAuthHeader();
+  try {
+    console.log(`Fetching pending invitations for project ${projectId}`);
+    const response = await axios.get(`${API_URL}/api/projects/${projectId}/invitations`);
+    
+    if (!response || !response.data) {
+      console.log('No pending invitations found');
+      return [];
+    }
+    
+    console.log('Pending invitations:', response.data);
+    return Array.isArray(response.data) ? response.data : [];
+  } catch (error) {
+    console.error('Error fetching pending invitations:', {
+      error,
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    
+    if (error.response?.status === 401) {
+      throw new Error('Authentication failed. Please login again.');
+    }
+    
+    throw new Error(
+      error.response?.data?.message || 
+      'Failed to fetch pending invitations'
+    );
+  }
+};
+
+export const cancelTeamInvitation = async (invitationId) => {
+  setupAuthHeader();
+  try {
+    console.log(`Cancelling invitation with ID: ${invitationId}`);
+    
+    // Call the server endpoint to cancel the invitation
+    // The backend will handle deleting its own notifications for the recipient
+    const response = await axios.post(`${API_URL}/api/invitations/${invitationId}/cancel`);
+    
+    console.log('Cancellation response:', response.data);
+    
+    // Return success information from the server
+    return { 
+      success: true, 
+      message: response.data?.message || 'Invitation cancelled successfully',
+      notificationsDeleted: response.data?.notifications_deleted || 0
+    };
+  } catch (error) {
+    console.error('Error canceling invitation:', {
+      invitationId,
+      error: error.response || error
+    });
+    
+    // Handle specific error cases
+    if (error.response?.status === 403) {
+      throw new Error('You do not have permission to cancel this invitation');
+    }
+    
+    if (error.response?.status === 404) {
+      throw new Error('Invitation not found or already cancelled');
+    }
+    
+    throw new Error(
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to cancel invitation'
+    );
+  }
+};
+
+export const fetchProjectExpenses = async (projectId) => {
+  setupAuthHeader();
+  try {
+    const response = await axios.get(`${API_URL}/api/projects/${projectId}/expenses`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching project expenses:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch expenses');
   }
 };
