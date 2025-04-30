@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\TeamInvitationNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class TeamInvitationController extends Controller
 {
@@ -107,13 +108,51 @@ class TeamInvitationController extends Controller
         }
     }
 
+    public function show($id)
+    {
+        try {
+            $invitation = TeamInvitation::with(['project', 'sender', 'recipient'])->findOrFail($id);
+            
+            // Check if user has permission to view this invitation
+            if ($invitation->recipient_id !== auth()->id() && 
+                $invitation->sender_id !== auth()->id() &&
+                $invitation->project->user_id !== auth()->id()) {
+                return response()->json(['message' => 'Unauthorized to view this invitation'], 403);
+            }
+            
+            return response()->json($invitation);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch invitation', [
+                'error' => $e->getMessage(),
+                'invitation_id' => $id,
+                'user_id' => auth()->id()
+            ]);
+            
+            return response()->json([
+                'message' => 'Invitation not found',
+                'detail' => $e instanceof ModelNotFoundException ? 'The specified invitation does not exist' : 'An error occurred'
+            ], 404);
+        }
+    }
+
     public function respond(Request $request, $id)
     {
         try {
-            $invitation = TeamInvitation::findOrFail($id);
+            $invitation = TeamInvitation::with('project')->findOrFail($id);
             
             if ($invitation->recipient_id !== auth()->id()) {
-                return response()->json(['message' => 'Unauthorized'], 403);
+                return response()->json([
+                    'message' => 'Unauthorized',
+                    'detail' => 'You are not the recipient of this invitation'
+                ], 403);
+            }
+
+            if ($invitation->status !== 'pending') {
+                return response()->json([
+                    'message' => 'Invalid invitation status',
+                    'detail' => 'This invitation has already been ' . $invitation->status
+                ], 400);
             }
 
             $validated = $request->validate([
@@ -151,11 +190,125 @@ class TeamInvitationController extends Controller
         } catch (\Exception $e) {
             Log::error('Team invitation response failed', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'invitation_id' => $id,
+                'user_id' => auth()->id()
             ]);
             
             return response()->json([
-                'message' => 'Failed to respond to invitation: ' . $e->getMessage()
+                'message' => 'Failed to respond to invitation',
+                'detail' => $e instanceof ModelNotFoundException ? 'Invitation not found' : 'An error occurred'
+            ], $e instanceof ModelNotFoundException ? 404 : 500);
+        }
+    }
+    
+    // NEW METHOD: Get pending invitations for a project
+    public function getProjectInvitations($projectId)
+    {
+        try {
+            // First, check if user has permission to view this project's invitations
+            $project = Project::findOrFail($projectId);
+            
+            $isOwner = $project->user_id === auth()->id();
+            $isTeamMember = $project->teamMembers()->where('user_id', auth()->id())->exists();
+            
+            if (!$isOwner && !$isTeamMember) {
+                return response()->json(['message' => 'Unauthorized'], 403);
+            }
+            
+            // For owners, show all pending invitations
+            $pendingInvitations = TeamInvitation::where('project_id', $projectId)
+                ->where('status', 'pending')
+                ->with(['recipient:id,name,email']) // Eager load recipient data
+                ->get();
+                
+            return response()->json($pendingInvitations);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to fetch project invitations', [
+                'error' => $e->getMessage(),
+                'project_id' => $projectId,
+                'user_id' => auth()->id()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to fetch invitations: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+    
+    // NEW METHOD: Cancel an invitation (only for project owners)
+    public function cancelInvitation($id)
+    {
+        try {
+            $invitation = TeamInvitation::with(['project', 'recipient'])->findOrFail($id);
+            
+            // Security check - only allow project owner to cancel invitations
+            if ($invitation->project->user_id !== auth()->id()) {
+                return response()->json(['message' => 'You do not have permission to cancel this invitation'], 403);
+            }
+            
+            // Only allow canceling pending invitations
+            if ($invitation->status !== 'pending') {
+                return response()->json(['message' => 'Cannot cancel an invitation that is not pending'], 400);
+            }
+
+            // Get the recipient user and their notifications before deleting the invitation
+            $recipient = $invitation->recipient;
+            $notifications = [];
+            
+            if ($recipient) {
+                $notifications = $recipient->notifications()
+                    ->whereJsonContains('data->invitation_id', (string)$id)
+                    ->get();
+            }
+            
+            // Delete the invitation first
+            $invitation->delete();
+            
+            // Then handle the notifications
+            $notificationsDeleted = 0;
+            foreach ($notifications as $notification) {
+                try {
+                    $notification->delete();
+                    $notificationsDeleted++;
+                } catch (\Exception $e) {
+                    Log::warning('Failed to delete notification', [
+                        'notification_id' => $notification->id,
+                        'invitation_id' => $id,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
+            
+            Log::info('Invitation cancelled successfully', [
+                'invitation_id' => $id,
+                'notifications_deleted' => $notificationsDeleted
+            ]);
+            
+            return response()->json([
+                'message' => 'Invitation cancelled successfully',
+                'notifications_deleted' => $notificationsDeleted,
+                'invitation_id' => $id
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to cancel invitation', [
+                'error' => $e->getMessage(),
+                'invitation_id' => $id,
+                'user_id' => auth()->id()
+            ]);
+            
+            if ($e instanceof ModelNotFoundException) {
+                return response()->json([
+                    'message' => 'Invitation not found',
+                    'detail' => 'The specified invitation does not exist'
+                ], 404);
+            }
+            
+            return response()->json([
+                'message' => 'Failed to cancel invitation',
+                'detail' => 'An unexpected error occurred'
             ], 500);
         }
     }

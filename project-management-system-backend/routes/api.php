@@ -11,6 +11,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeamInvitationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ExpenseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +48,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/projects/{project}/budget', [ProjectBudgetController::class, 'updateBudget']);
     Route::post('/projects/{project}/budget/expenditure', [ProjectBudgetController::class, 'addExpenditure']);
 
+    // Expense routes
+    Route::get('/projects/{project}/expenses', [ExpenseController::class, 'index']);
+    Route::post('/projects/{project}/expenses', [ExpenseController::class, 'store']);
+    Route::delete('/projects/{project}/expenses/{expense}', [ExpenseController::class, 'destroy']);
+
     // Task routes
     Route::get('/projects/{project}/tasks', [TaskController::class, 'index']);
     Route::post('/projects/{project}/tasks', [TaskController::class, 'store']);
@@ -66,11 +72,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Team invitation routes
     Route::post('projects/{projectId}/invitations', [TeamInvitationController::class, 'store']);
+    Route::get('invitations/{id}', [TeamInvitationController::class, 'show']);
     Route::post('invitations/{id}/respond', [TeamInvitationController::class, 'respond']);
+    Route::get('projects/{projectId}/invitations', [TeamInvitationController::class, 'getProjectInvitations']);
+    Route::post('invitations/{id}/cancel', [TeamInvitationController::class, 'cancelInvitation']);
+    
     // Notification routes
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::patch('notifications/{id}', [NotificationController::class, 'markAsHandled']);
+    Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
+    Route::post('notifications/cleanup', [NotificationController::class, 'cleanupStaleNotifications']); // Add this line
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

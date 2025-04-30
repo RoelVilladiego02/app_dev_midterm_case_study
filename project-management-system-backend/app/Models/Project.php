@@ -51,4 +51,20 @@ class Project extends Model
     {
         return ($this->actual_expenditure + $amount) <= $this->total_budget;
     }
+
+    public function expenses()
+    {
+        return $this->hasMany(Expense::class);
+    }
+
+    public function calculateActualExpenditure()
+    {
+        return $this->expenses()->sum('amount');
+    }
+
+    public function updateExpenditure()
+    {
+        $this->actual_expenditure = $this->calculateActualExpenditure();
+        $this->save();
+    }
 }
