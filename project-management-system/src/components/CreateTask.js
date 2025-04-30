@@ -8,6 +8,7 @@ const CreateTask = () => {
   const [teamMembers, setTeamMembers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [availableBudget, setAvailableBudget] = useState(0);
   const navigate = useNavigate();
   const { projectId } = useParams();
 
@@ -37,6 +38,12 @@ const CreateTask = () => {
         if (!isProjectOwner && !isTeamMember) {
           throw new Error('You do not have permission to add tasks to this project');
         }
+
+        // Calculate available budget
+        const totalBudget = projectData.budget || 0;
+        const usedBudget = projectData.usedBudget || 0;
+        const calculatedAvailableBudget = Math.max(0, totalBudget - usedBudget);
+        setAvailableBudget(calculatedAvailableBudget);
 
         // Get team members directly from project data or fetch separately
         let teamMembersList = [];
@@ -94,12 +101,14 @@ const CreateTask = () => {
         status: 'todo',
         priority: taskData.priority || 'medium',
         due_date: taskData.due_date || null,
-        assignee: taskData.assignee
+        assignee: taskData.assignee,
+        cost: parseFloat(taskData.cost) || 0  // Ensure cost is a number and defaulted to 0
       });
       navigate(`/projects/${projectId}`);
     } catch (err) {
       console.error('Task creation error:', err);
-      setError(err.message || 'Failed to create task. Please try again.');
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to create task. Please try again.';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -131,6 +140,7 @@ const CreateTask = () => {
         users={teamMembers}
         onSubmit={handleSubmit} 
         isLoading={isLoading}
+        budget={availableBudget}
       />
     </div>
   );

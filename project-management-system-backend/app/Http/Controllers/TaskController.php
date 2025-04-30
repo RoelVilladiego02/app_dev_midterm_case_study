@@ -19,13 +19,27 @@ class TaskController extends Controller
     {
         $project = Project::findOrFail($projectId);
 
+        // Check remaining budget
+        $currentExpenditure = $project->tasks()->sum('cost');
+        $remainingBudget = $project->total_budget - $currentExpenditure;
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'status' => 'required|in:todo,in_progress,completed',
             'priority' => 'required|in:low,medium,high',
             'due_date' => 'nullable|date',
+            'cost' => 'required|numeric|min:0',
         ]);
+
+        // Validate task cost against remaining budget
+        if ($validated['cost'] > $remainingBudget) {
+            return response()->json([
+                'message' => 'Task cost exceeds remaining project budget',
+                'remaining_budget' => $remainingBudget,
+                'requested_cost' => $validated['cost']
+            ], 422);
+        }
 
         $task = $project->tasks()->create([
             'title' => $validated['title'],
@@ -34,14 +48,46 @@ class TaskController extends Controller
             'priority' => $validated['priority'],
             'due_date' => $validated['due_date'] ?? null,
             'user_id' => auth()->id(),
+            'cost' => $validated['cost'],
         ]);
+
+        // Update project's actual expenditure
+        $project->actual_expenditure = $currentExpenditure + $validated['cost'];
+        $project->save();
 
         return response()->json($task, 201);
     }
 
+    public function show($projectId, $taskId)
+    {
+        $task = Task::where('project_id', $projectId)
+            ->with(['assignedUsers', 'project'])
+            ->findOrFail($taskId);
+            
+        // Check if user has access to the task's project
+        if ($task->project->user_id !== auth()->id() && 
+            !$task->project->teamMembers()->where('user_id', auth()->id())->exists()) {
+            return response()->json([
+                'message' => 'You do not have access to this task'
+            ], 403);
+        }
+
+        return response()->json($task);
+    }
+
     public function update(Request $request, $projectId, $taskId)
     {
-        $task = Task::where('id', $taskId)->where('project_id', $projectId)->firstOrFail();
+        $task = Task::where('id', $taskId)
+            ->where('project_id', $projectId)
+            ->firstOrFail();
+            
+        $project = Project::findOrFail($projectId);
+
+        // Calculate remaining budget excluding current task's cost
+        $currentExpenditure = $project->tasks()
+            ->where('id', '!=', $taskId)
+            ->sum('cost');
+        $remainingBudget = $project->total_budget - $currentExpenditure;
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -49,7 +95,21 @@ class TaskController extends Controller
             'status' => 'required|in:todo,in_progress,completed',
             'priority' => 'required|in:low,medium,high',
             'due_date' => 'nullable|date',
+            'cost' => 'required|numeric|min:0',
         ]);
+
+        // Validate new cost against remaining budget
+        if ($validated['cost'] > ($remainingBudget + $task->cost)) {
+            return response()->json([
+                'message' => 'Task cost exceeds remaining project budget',
+                'remaining_budget' => $remainingBudget + $task->cost,
+                'requested_cost' => $validated['cost']
+            ], 422);
+        }
+
+        // Update project's actual expenditure
+        $project->actual_expenditure = $currentExpenditure + $validated['cost'];
+        $project->save();
 
         $task->update($validated);
         return response()->json($task);

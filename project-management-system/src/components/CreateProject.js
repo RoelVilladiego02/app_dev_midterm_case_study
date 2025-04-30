@@ -13,8 +13,20 @@ const CreateProject = () => {
     setIsLoading(true);
     setError('');
     try {
-      console.log('Creating project with data:', { ...projectData, status: 'pending' }); // Log the payload being sent
-      await createProject({ ...projectData, status: 'pending' }); // Ensure 'status' is set to 'pending'
+      console.log('Creating project with data:', { 
+        ...projectData, 
+        status: 'pending',
+        total_budget: projectData.total_budget || 0,
+        actual_expenditure: 0
+      });
+      
+      await createProject({ 
+        ...projectData, 
+        status: 'pending',
+        total_budget: projectData.total_budget || 0,
+        actual_expenditure: 0
+      });
+      
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to create project:', err);

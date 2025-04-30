@@ -148,22 +148,13 @@ const ProjectView = () => {
   
   const handleAssignmentUpdate = async () => {
     try {
-      // First close the modal
       setShowAssignModal(false);
-      
-      // Wait a moment to ensure backend processing is complete
-      setTimeout(async () => {
-        try {
-          // Force a complete refresh of the component data
-          setRefreshTimestamp(Date.now());
-        } catch (refreshErr) {
-          console.error('Error in delayed refresh:', refreshErr);
-        }
-      }, 500);
+      // Fetch fresh task data immediately after assignment
+      const updatedTasks = await fetchTasks(projectId);
+      setTasks(updatedTasks);
     } catch (err) {
       console.error('Error updating task assignments:', err);
       setError('Failed to update task assignments.');
-      setShowAssignModal(false);
     }
   };
 
@@ -300,6 +291,9 @@ const ProjectView = () => {
                       )}
                       <span className={styles.assignedUser}>
                         Assigned to: {task.assigned_user ? task.assigned_user.name : 'Unassigned'}
+                      </span>
+                      <span className={styles.taskCost}>
+                        Cost: ${task.cost ? parseFloat(task.cost).toFixed(2) : '0.00'}
                       </span>
                     </div>
                   </div>

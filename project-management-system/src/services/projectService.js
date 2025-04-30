@@ -129,16 +129,21 @@ export const fetchTasks = async (projectId) => {
     // Map through tasks and ensure we get assigned users for each task
     const tasksWithUsers = await Promise.all(response.data.map(async (task) => {
       try {
-        const assignedUsers = await fetchAssignedUsers(projectId, task.id);
+        const assignedUsersResponse = await axios.get(
+          `${API_URL}/api/projects/${projectId}/tasks/${task.id}/users`
+        );
+        const assignedUsers = assignedUsersResponse.data;
         return {
           ...task,
-          assigned_user: assignedUsers && assignedUsers.length > 0 ? assignedUsers[0] : null
+          assigned_user: assignedUsers && assignedUsers.length > 0 ? assignedUsers[0] : null,
+          assignedUsers: assignedUsers || []
         };
       } catch (error) {
-        console.error(`Error fetching assigned user for task ${task.id}:`, error);
+        console.error(`Error fetching assigned users for task ${task.id}:`, error);
         return {
           ...task,
-          assigned_user: task.user || null
+          assigned_user: null,
+          assignedUsers: []
         };
       }
     }));
@@ -244,45 +249,36 @@ const invalidateTaskCache = async (projectId, taskId) => {
 export const createTask = async (projectId, taskData) => {
   setupAuthHeader();
   try {
-    console.log('Creating task:', taskData);
+    console.log('Creating task with data:', taskData);
     
-    // Create the task first
+    // Create the task with all required fields
     const response = await axios.post(
       `${API_URL}/api/projects/${projectId}/tasks`,
       {
         title: taskData.title,
-        description: taskData.description,
+        description: taskData.description || '',
         status: taskData.status || 'todo',
-        priority: taskData.priority,
-        due_date: taskData.due_date
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        }
+        priority: taskData.priority || 'low',
+        due_date: taskData.due_date || null,
+        cost: parseFloat(taskData.cost) || 0, // Ensure cost is always included as a number
+        completion_percentage: taskData.completion_percentage || 0
       }
     );
     
     console.log('Task created:', response.data);
     const taskId = response.data.id;
     
-    // Check for either assignee (from CreateTask.js) or assigned_to (legacy support)
-    const userId = taskData.assignee || taskData.assigned_to;
-    
-    // If a user is assigned, assign them to the task
-    if (userId) {
-      try {
-        await assignUserToTask(projectId, taskId, userId);
-      } catch (assignError) {
-        console.error('Error assigning user during task creation:', assignError);
-        // Continue without failing the whole operation
-      }
+    // If an assignee is specified, assign them to the task
+    if (taskData.assignee) {
+      await assignUserToTask(projectId, taskId, taskData.assignee);
     }
     
     return response.data;
   } catch (error) {
     console.error('Task creation error details:', error);
-    throw new Error(error.response?.data?.message || 'Failed to create task');
+    const errorMessage = error.response?.data?.message || 'Failed to create task';
+    console.error('Error message:', errorMessage);
+    throw new Error(errorMessage);
   }
 };
 
@@ -303,28 +299,48 @@ export const updateTaskProgress = async (projectId, taskId, percentage) => {
 export const updateTask = async (projectId, taskId, taskData) => {
   setupAuthHeader();
   try {
+    console.log('Updating task with data:', taskData);
+    
+    const updateData = {
+      title: taskData.title,
+      description: taskData.description || '',
+      status: taskData.status || 'todo',
+      priority: taskData.priority || 'low',
+      due_date: taskData.due_date || null,
+      cost: parseFloat(taskData.cost) || 0, // Ensure cost is always included
+      completion_percentage: taskData.completion_percentage || 0
+    };
+    
+    console.log('Sending update with data:', updateData);
+    
     const response = await axios.put(
       `${API_URL}/api/projects/${projectId}/tasks/${taskId}`,
-      {
-        ...taskData,
-        completion_percentage: taskData.completion_percentage
-      }
+      updateData
     );
+    
+    console.log('Task update response:', response.data);
     
     // Handle assignee changes separately
     if (taskData.assignee) {
       console.log(`Updating task assignee to user ID: ${taskData.assignee}`);
       
-      // Get current assigned users
-      const currentAssignedUsers = await fetchAssignedUsers(projectId, taskId);
-      
-      // If already assigned to someone, unassign first
-      if (currentAssignedUsers && currentAssignedUsers.length > 0) {
-        await unassignUserFromTask(projectId, taskId, currentAssignedUsers[0].id);
+      try {
+        // Get current assigned users
+        const currentAssignedUsers = await fetchAssignedUsers(projectId, taskId);
+        
+        // If already assigned to someone, unassign first
+        if (currentAssignedUsers && currentAssignedUsers.length > 0) {
+          for (const user of currentAssignedUsers) {
+            await unassignUserFromTask(projectId, taskId, user.id);
+          }
+        }
+        
+        // Then assign to new user
+        await assignUserToTask(projectId, taskId, taskData.assignee);
+      } catch (assignmentError) {
+        console.error('Error updating task assignment:', assignmentError);
+        // Continue even if assignment fails - we don't want to fail the whole task update
       }
-      
-      // Then assign to new user
-      await assignUserToTask(projectId, taskId, taskData.assignee);
     }
     
     // Force refresh of the task data after all updates
@@ -333,7 +349,9 @@ export const updateTask = async (projectId, taskId, taskData) => {
     return response.data;
   } catch (error) {
     console.error('Task update error:', error);
-    throw error.response?.data?.message || 'Failed to update task';
+    const errorMessage = error.response?.data?.message || 'Failed to update task';
+    console.error('Error message:', errorMessage);
+    throw new Error(errorMessage);
   }
 };
 

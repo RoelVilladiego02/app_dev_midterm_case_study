@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 
 class ProjectBudgetController extends Controller
 {
@@ -13,43 +12,49 @@ class ProjectBudgetController extends Controller
         return response()->json([
             'total_budget' => $project->total_budget,
             'actual_expenditure' => $project->actual_expenditure,
-            'remaining_budget' => $project->remaining_budget
+            'remaining_budget' => $project->remaining_budget,
         ]);
     }
 
     public function updateBudget(Request $request, Project $project)
     {
-        $validator = Validator::make($request->all(), [
-            'total_budget' => 'required|numeric|min:0'
+        $validated = $request->validate([
+            'total_budget' => 'required|numeric|min:0',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+        $project->update([
+            'total_budget' => $validated['total_budget'],
+        ]);
 
-        $project->update(['total_budget' => $request->total_budget]);
-
-        return response()->json(['message' => 'Budget updated successfully']);
+        return response()->json([
+            'message' => 'Budget updated successfully',
+            'total_budget' => $project->total_budget,
+            'actual_expenditure' => $project->actual_expenditure,
+            'remaining_budget' => $project->remaining_budget,
+        ]);
     }
 
     public function addExpenditure(Request $request, Project $project)
     {
-        $validator = Validator::make($request->all(), [
+        $validated = $request->validate([
             'amount' => 'required|numeric|min:0',
-            'description' => 'required|string|max:255'
+            'description' => 'required|string',
         ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+        if (!$project->canAddExpenditure($validated['amount'])) {
+            return response()->json([
+                'message' => 'Expenditure amount exceeds remaining budget'
+            ], 422);
         }
 
-        if (!$project->canAddExpenditure($request->amount)) {
-            return response()->json(['error' => 'Expenditure exceeds budget limit'], 422);
-        }
-
-        $project->actual_expenditure += $request->amount;
+        $project->actual_expenditure += $validated['amount'];
         $project->save();
 
-        return response()->json(['message' => 'Expenditure logged successfully']);
+        return response()->json([
+            'message' => 'Expenditure added successfully',
+            'total_budget' => $project->total_budget,
+            'actual_expenditure' => $project->actual_expenditure,
+            'remaining_budget' => $project->remaining_budget,
+        ]);
     }
 }

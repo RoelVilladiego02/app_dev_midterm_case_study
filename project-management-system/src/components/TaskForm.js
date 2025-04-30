@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import styles from '../componentsStyles/TaskForm.module.css';
 
-const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMode = false }) => {
+const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMode = false, budget = 0 }) => {
   const [title, setTitle] = useState(initialData.title || '');
   const [description, setDescription] = useState(initialData.description || '');
   const [assignee, setAssignee] = useState(initialData.assignee || '');
@@ -12,6 +12,7 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
   const [completionPercentage, setCompletionPercentage] = useState(
     initialData.completion_percentage || 0
   );
+  const [cost, setCost] = useState(initialData.cost || 0);
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
@@ -22,6 +23,15 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
     if (!['low', 'medium', 'high'].includes(priority)) {
       newErrors.priority = 'Invalid priority.';
     }
+    
+    // Ensure cost is a valid number
+    const costValue = parseFloat(cost);
+    if (isNaN(costValue) || costValue < 0) {
+      newErrors.cost = 'Cost must be a valid non-negative number.';
+    } else if (costValue > budget) {
+      newErrors.cost = 'Cost cannot exceed project budget.';
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -29,14 +39,19 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      onSubmit({
+      const taskData = {
         title,
         description,
-        assignee: parseInt(assignee), // Ensure assignee is a number
+        assignee: parseInt(assignee, 10), // Ensure assignee is a number
         status: isEditMode ? status : 'todo',
         priority,
-        due_date: dueDate || null
-      });
+        due_date: dueDate || null,
+        cost: parseFloat(cost) || 0, // Ensure cost is a number and has a default of 0
+        completion_percentage: completionPercentage // Include completion percentage
+      };
+      
+      console.log('Submitting task data:', taskData);
+      onSubmit(taskData);
     }
   };
 
@@ -74,7 +89,7 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
       <div className={styles.formGroup}>
         <label>Assignee</label>
         <select
-          value={assignee} // Ensure the dropdown value is set to the preselected assignee
+          value={assignee} 
           onChange={(e) => setAssignee(e.target.value)}
           required
         >
@@ -88,21 +103,19 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
         {errors.assignee && <p className={styles.error}>{errors.assignee}</p>}
       </div>
 
-      {isEditMode && (
-        <div className={styles.formGroup}>
-          <label>Status</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            required
-          >
-            <option value="todo">To Do</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
-          {errors.status && <p className={styles.error}>{errors.status}</p>}
-        </div>
-      )}
+      <div className={styles.formGroup}>
+        <label>Status</label>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          required
+        >
+          <option value="todo">To Do</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+        {errors.status && <p className={styles.error}>{errors.status}</p>}
+      </div>
 
       <div className={styles.formGroup}>
         <label>Priority</label>
@@ -135,14 +148,33 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
             min="0"
             max="100"
             value={completionPercentage}
-            onChange={(e) => setCompletionPercentage(parseInt(e.target.value))}
+            onChange={(e) => setCompletionPercentage(parseInt(e.target.value, 10))}
           />
           <span>{completionPercentage}%</span>
         </div>
       </div>
 
+      <div className={styles.formGroup}>
+        <label>Cost</label>
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          max={budget}
+          value={cost}
+          onChange={(e) => setCost(e.target.value)}
+          required
+        />
+        {errors.cost && <p className={styles.error}>{errors.cost}</p>}
+        {budget > 0 && (
+          <small className={styles.budgetHint}>
+            Available budget: ${budget.toFixed(2)}
+          </small>
+        )}
+      </div>
+
       <button type="submit" disabled={isLoading}>
-        {isLoading ? 'Saving...' : 'Save Task'}
+        {isLoading ? 'Saving...' : isEditMode ? 'Update Task' : 'Create Task'}
       </button>
     </form>
   );
@@ -154,6 +186,7 @@ TaskForm.propTypes = {
   onSubmit: PropTypes.func.isRequired,
   isLoading: PropTypes.bool,
   isEditMode: PropTypes.bool,
+  budget: PropTypes.number
 };
 
 export default TaskForm;

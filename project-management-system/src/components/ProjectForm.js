@@ -6,7 +6,8 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
   const [title, setTitle] = useState(initialData.title || '');
   const [description, setDescription] = useState(initialData.description || '');
   const [startDate, setStartDate] = useState(initialData.start_date || '');
-  const [endDate, setEndDate] = useState(initialData.end_date || ''); // Default to 'pending'
+  const [endDate, setEndDate] = useState(initialData.end_date || '');
+  const [totalBudget, setTotalBudget] = useState(initialData.total_budget || '');
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
@@ -15,6 +16,9 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
     if (title.length > 255) newErrors.title = 'Title cannot exceed 255 characters.';
     if (endDate && startDate && new Date(endDate) < new Date(startDate)) {
       newErrors.endDate = 'End date cannot be earlier than start date.';
+    }
+    if (totalBudget && totalBudget < 0) {
+      newErrors.totalBudget = 'Budget cannot be negative.';
     }
     // Validate status according to Laravel's rules
     if (initialData.status && !['pending', 'in_progress', 'completed'].includes(initialData.status)) {
@@ -32,6 +36,8 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
         description,
         start_date: startDate,
         end_date: endDate,
+        total_budget: totalBudget ? parseFloat(totalBudget) : 0,
+        actual_expenditure: 0, // Initialize with 0
       });
     }
   };
@@ -77,7 +83,18 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
         {errors.endDate && <p className={styles.error}>{errors.endDate}</p>}
       </div>
 
-
+      <div className={styles.formGroup}>
+        <label>Total Budget</label>
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={totalBudget}
+          onChange={(e) => setTotalBudget(e.target.value)}
+          placeholder="Enter project budget"
+        />
+        {errors.totalBudget && <p className={styles.error}>{errors.totalBudget}</p>}
+      </div>
 
       <button type="submit" disabled={isLoading} className={styles.submitButton}>
         {isLoading ? 'Saving...' : 'Save Project'}

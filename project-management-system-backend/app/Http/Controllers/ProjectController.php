@@ -22,6 +22,8 @@ class ProjectController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'status' => 'required|in:pending,in_progress,completed',
+            'total_budget' => 'nullable|numeric|min:0',
+            'actual_expenditure' => 'nullable|numeric|min:0',
         ]);
 
         $project = Project::create([
@@ -31,6 +33,8 @@ class ProjectController extends Controller
             'end_date' => $validated['end_date'] ?? null,
             'status' => $validated['status'],
             'user_id' => auth()->id(),
+            'total_budget' => $validated['total_budget'] ?? 0,
+            'actual_expenditure' => $validated['actual_expenditure'] ?? 0,
         ]);
 
         return response()->json($project, 201);
@@ -89,6 +93,8 @@ class ProjectController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'status' => 'required|in:pending,in_progress,completed',
+            'total_budget' => 'nullable|numeric|min:0',
+            'actual_expenditure' => 'nullable|numeric|min:0',
         ]);
 
         $project->update($validated);
