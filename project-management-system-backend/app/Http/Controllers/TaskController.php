@@ -6,56 +6,90 @@ use Illuminate\Http\Request;
 use App\Models\Task;
 use App\Models\Project;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class TaskController extends Controller
 {
     public function index($projectId)
     {
-        $tasks = Task::where('project_id', $projectId)->get();
+        $tasks = Task::where('project_id', $projectId)
+            ->with(['assignedUsers:id,name,email']) // Optimize by selecting specific fields
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'priority' => $task->priority,
+                    'due_date' => $task->due_date,
+                    'created_at' => $task->created_at,
+                    'updated_at' => $task->updated_at,
+                    'assigned_user' => $task->assignedUsers->first(),
+                    'assignedUsers' => $task->assignedUsers
+                ];
+            });
+
         return response()->json($tasks);
     }
 
     public function store(Request $request, $projectId)
     {
-        $project = Project::findOrFail($projectId);
+        try {
+            // Log incoming request data
+            Log::info('Creating task - Received data:', [
+                'project_id' => $projectId,
+                'request_data' => $request->all()
+            ]);
 
-        // Check remaining budget
-        $currentExpenditure = $project->tasks()->sum('cost');
-        $remainingBudget = $project->total_budget - $currentExpenditure;
+            $project = Project::findOrFail($projectId);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|in:todo,in_progress,completed',
-            'priority' => 'required|in:low,medium,high',
-            'due_date' => 'nullable|date',
-            'cost' => 'required|numeric|min:0',
-        ]);
+            // Validate with more flexible rules
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'status' => 'required|string|in:todo,in_progress,completed',
+                'priority' => 'required|string|in:low,medium,high',
+                'due_date' => 'nullable|date_format:Y-m-d|after_or_equal:today',
+                'project_id' => 'nullable|exists:projects,id' // Allow but not required
+            ]);
 
-        // Validate task cost against remaining budget
-        if ($validated['cost'] > $remainingBudget) {
+            // Clean up the data
+            $taskData = array_filter([
+                'title' => trim($validated['title']),
+                'description' => trim($validated['description'] ?? ''),
+                'status' => $validated['status'],
+                'priority' => $validated['priority'],
+                'due_date' => $validated['due_date'] ?? null,
+                'project_id' => $projectId // Ensure project_id is set
+            ]);
+
+            $task = $project->tasks()->create($taskData);
+
+            Log::info('Task created successfully', [
+                'task_id' => $task->id,
+                'project_id' => $projectId
+            ]);
+
+            // Return task with relationships
             return response()->json([
-                'message' => 'Task cost exceeds remaining project budget',
-                'remaining_budget' => $remainingBudget,
-                'requested_cost' => $validated['cost']
-            ], 422);
+                'message' => 'Task created successfully',
+                'task' => $task->fresh(['assignedUsers'])
+            ], 201);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to create task', [
+                'error' => $e->getMessage(),
+                'project_id' => $projectId,
+                'request_data' => $request->all()
+            ]);
+
+            return response()->json([
+                'message' => 'Failed to create task',
+                'error' => $e->getMessage(),
+                'detail' => config('app.debug') ? $e->getTraceAsString() : null
+            ], 500);
         }
-
-        $task = $project->tasks()->create([
-            'title' => $validated['title'],
-            'description' => $validated['description'] ?? null,
-            'status' => $validated['status'],
-            'priority' => $validated['priority'],
-            'due_date' => $validated['due_date'] ?? null,
-            'user_id' => auth()->id(),
-            'cost' => $validated['cost'],
-        ]);
-
-        // Update project's actual expenditure
-        $project->actual_expenditure = $currentExpenditure + $validated['cost'];
-        $project->save();
-
-        return response()->json($task, 201);
     }
 
     public function show($projectId, $taskId)
@@ -77,42 +111,32 @@ class TaskController extends Controller
 
     public function update(Request $request, $projectId, $taskId)
     {
-        $task = Task::where('id', $taskId)
-            ->where('project_id', $projectId)
-            ->firstOrFail();
-            
-        $project = Project::findOrFail($projectId);
+        try {
+            $task = Task::where('project_id', $projectId)->findOrFail($taskId);
 
-        // Calculate remaining budget excluding current task's cost
-        $currentExpenditure = $project->tasks()
-            ->where('id', '!=', $taskId)
-            ->sum('cost');
-        $remainingBudget = $project->total_budget - $currentExpenditure;
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'status' => 'required|in:todo,in_progress,completed',
+                'priority' => 'required|in:low,medium,high',
+                'due_date' => 'nullable|date',
+            ]);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'status' => 'required|in:todo,in_progress,completed',
-            'priority' => 'required|in:low,medium,high',
-            'due_date' => 'nullable|date',
-            'cost' => 'required|numeric|min:0',
-        ]);
+            $task->update($validated);
 
-        // Validate new cost against remaining budget
-        if ($validated['cost'] > ($remainingBudget + $task->cost)) {
             return response()->json([
-                'message' => 'Task cost exceeds remaining project budget',
-                'remaining_budget' => $remainingBudget + $task->cost,
-                'requested_cost' => $validated['cost']
-            ], 422);
+                'message' => 'Task updated successfully',
+                'task' => $task->fresh('assignedUsers')
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to update task', [
+                'error' => $e->getMessage(),
+                'project_id' => $projectId,
+                'task_id' => $taskId
+            ]);
+            return response()->json(['message' => 'Failed to update task'], 500);
         }
-
-        // Update project's actual expenditure
-        $project->actual_expenditure = $currentExpenditure + $validated['cost'];
-        $project->save();
-
-        $task->update($validated);
-        return response()->json($task);
     }
 
     public function destroy($projectId, $taskId)

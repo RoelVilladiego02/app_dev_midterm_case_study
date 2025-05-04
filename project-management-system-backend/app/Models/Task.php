@@ -14,10 +14,12 @@ class Task extends Model
         'description',
         'status',
         'priority',
-        'project_id',
-        'user_id',
         'due_date',
-        'cost',
+        'project_id'
+    ];
+
+    protected $casts = [
+        'due_date' => 'datetime',
     ];
 
     public function project()
@@ -25,13 +27,8 @@ class Task extends Model
         return $this->belongsTo(Project::class);
     }
 
-    public function user()
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function assignedUsers()
     {
-        return $this->belongsToMany(User::class)->withTimestamps();
+        return $this->belongsToMany(User::class, 'task_user', 'task_id', 'user_id')->withTimestamps();
     }
 }
