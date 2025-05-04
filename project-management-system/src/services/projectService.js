@@ -1,16 +1,24 @@
 import axios from 'axios';
+import { fetchTasks } from './taskService';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000';
-
-// Configure axios defaults
-axios.defaults.withCredentials = true;
-axios.defaults.headers.common['Accept'] = 'application/json';
-axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
-
-const setupAuthHeader = () => {
+// Add centralized token check
+const checkAuthToken = () => {
   const token = localStorage.getItem('auth_token');
-  if (token) {
+  if (!token) {
+    throw new Error('Authentication token not found. Please log in again.');
+  }
+  return token;
+};
+
+// Update setupAuthHeader to use the new check
+export const setupAuthHeader = () => {
+  try {
+    const token = checkAuthToken();
     axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } catch (error) {
+    delete axios.defaults.headers.common['Authorization'];
+    throw error;
   }
 };
 
@@ -19,7 +27,6 @@ export const fetchProjects = async () => {
   try {
     console.log('Fetching projects with auth token:', localStorage.getItem('auth_token'));
     
-    // Use the getAllProjects endpoint which returns both owned and team projects
     const response = await axios.get(`${API_URL}/api/projects/getAllProjects`);
     
     if (!response || !response.data) {
@@ -69,27 +76,41 @@ export const fetchProjects = async () => {
 export const createProject = async (projectData) => {
   setupAuthHeader();
   try {
-    // Ensure status matches Laravel's accepted values
-    const validData = {
-      ...projectData,
-      status: projectData.status || 'pending',
-      total_budget: parseFloat(projectData.total_budget) || 0,
-      actual_expenditure: parseFloat(projectData.actual_expenditure) || 0
-    };
+    const MAX_BUDGET = 999999999.99;
+    const budget = projectData.total_budget ? parseFloat(projectData.total_budget) : 0;
     
+    if (budget > MAX_BUDGET) {
+      throw new Error(`Total budget cannot exceed ${MAX_BUDGET.toLocaleString()}`);
+    }
+
+    // Format data according to Laravel validation rules
+    const validData = {
+      title: projectData.title,
+      description: projectData.description || null,
+      start_date: projectData.start_date || null,
+      end_date: projectData.end_date || null,
+      status: projectData.status || 'pending',
+      total_budget: budget,
+      actual_expenditure: projectData.actual_expenditure ? parseFloat(projectData.actual_expenditure) : 0
+    };
+
     console.log('Creating project with data:', validData);
     const response = await axios.post(`${API_URL}/api/projects`, validData);
     return response.data;
   } catch (error) {
     console.error('Error in createProject:', error.response || error);
-    throw error.response?.data?.message || 'Failed to create project';
+    throw new Error(
+      error.response?.data?.message || 
+      (error.response?.data?.errors ? Object.values(error.response.data.errors).flat().join(', ') : '') ||
+      error.message ||
+      'Failed to create project'
+    );
   }
 };
 
 export const updateProject = async (projectId, projectData) => {
   setupAuthHeader();
   try {
-    // Ensure status matches Laravel's accepted values
     const validData = {
       ...projectData,
       status: projectData.status || 'pending',
@@ -112,13 +133,10 @@ export const updateProject = async (projectId, projectData) => {
 export const deleteProject = async (projectId) => {
   setupAuthHeader();
   try {
-    // Check if the project has associated tasks
     const tasks = await fetchTasks(projectId);
     if (tasks.length > 0) {
       throw new Error('Cannot delete project with associated tasks.');
     }
-
-    // Proceed with deletion if no tasks exist
     await axios.delete(`${API_URL}/api/projects/${projectId}`);
   } catch (error) {
     console.error('Error deleting project:', error.response || error);
@@ -126,269 +144,21 @@ export const deleteProject = async (projectId) => {
   }
 };
 
-// Task-related functions
-
-export const fetchTasks = async (projectId) => {
-  setupAuthHeader();
-  try {
-    console.log(`Fetching tasks for project ${projectId}`);
-    const response = await axios.get(`${API_URL}/api/projects/${projectId}/tasks`);
-    console.log('Tasks response:', response.data);
-    
-    // Map through tasks and ensure we get assigned users for each task
-    const tasksWithUsers = await Promise.all(response.data.map(async (task) => {
-      try {
-        const assignedUsersResponse = await axios.get(
-          `${API_URL}/api/projects/${projectId}/tasks/${task.id}/users`
-        );
-        const assignedUsers = assignedUsersResponse.data;
-        return {
-          ...task,
-          assigned_user: assignedUsers && assignedUsers.length > 0 ? assignedUsers[0] : null,
-          assignedUsers: assignedUsers || []
-        };
-      } catch (error) {
-        console.error(`Error fetching assigned users for task ${task.id}:`, error);
-        return {
-          ...task,
-          assigned_user: null,
-          assignedUsers: []
-        };
-      }
-    }));
-    
-    return tasksWithUsers;
-  } catch (error) {
-    console.error('Error fetching tasks:', {
-      status: error.response?.status,
-      message: error.response?.data?.message
-    });
-    throw error.response?.data?.message || 'Failed to fetch tasks';
-  }
-};
-
-export const assignUserToTask = async (projectId, taskId, userId) => {
-  setupAuthHeader();
-  try {
-    console.log(`Assigning user ${userId} to task ${taskId} in project ${projectId}`);
-    
-    // Ensure all parameters are numbers
-    const parsedProjectId = parseInt(projectId, 10);
-    const parsedTaskId = parseInt(taskId, 10);
-    const parsedUserId = parseInt(userId, 10);
-    
-    if (isNaN(parsedProjectId) || isNaN(parsedTaskId) || isNaN(parsedUserId)) {
-      throw new Error('Invalid ID provided');
-    }
-
-    // First verify the user is a team member
-    const teamMembers = await fetchTeamMembers(parsedProjectId);
-    const isTeamMember = teamMembers.some(member => member.id === parsedUserId);
-    
-    if (!isTeamMember) {
-      throw new Error('Selected user is not a member of this project');
-    }
-
-    const response = await axios.post(
-      `${API_URL}/api/projects/${parsedProjectId}/tasks/${parsedTaskId}/assign`,
-      { user_id: parsedUserId }
-    );
-    
-    console.log('User assignment response:', response.data);
-    
-    // Clear the cache to ensure fresh data on next fetch
-    await invalidateTaskCache(parsedProjectId, parsedTaskId);
-    
-    return response.data;
-  } catch (error) {
-    console.error('User assignment error:', error.response || error);
-    throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to assign user to task'
-    );
-  }
-};
-
-export const unassignUserFromTask = async (projectId, taskId, userId) => {
-  setupAuthHeader();
-  try {
-    console.log(`Unassigning user ${userId} from task ${taskId} in project ${projectId}`);
-    
-    // Ensure all parameters are numbers
-    const parsedProjectId = parseInt(projectId, 10);
-    const parsedTaskId = parseInt(taskId, 10);
-    const parsedUserId = parseInt(userId, 10);
-    
-    if (isNaN(parsedProjectId) || isNaN(parsedTaskId) || isNaN(parsedUserId)) {
-      throw new Error('Invalid ID provided');
-    }
-
-    const response = await axios.delete(
-      `${API_URL}/api/projects/${parsedProjectId}/tasks/${parsedTaskId}/unassign/${parsedUserId}`
-    );
-    
-    console.log('User unassignment response:', response.data);
-    
-    // Clear the cache to ensure fresh data on next fetch
-    await invalidateTaskCache(parsedProjectId, parsedTaskId);
-    
-    return response.data;
-  } catch (error) {
-    console.error('User unassignment error:', error.response || error);
-    throw new Error(
-      error.response?.data?.message || 
-      error.message || 
-      'Failed to unassign user from task'
-    );
-  }
-};
-
-// Helper function to invalidate task cache after reassignment
-const invalidateTaskCache = async (projectId, taskId) => {
-  // This is a workaround for cache issues - force a fresh fetch of the task
-  try {
-    await axios.get(`${API_URL}/api/projects/${projectId}/tasks/${taskId}?_=${Date.now()}`);
-  } catch (error) {
-    console.warn('Cache invalidation attempt failed:', error);
-    // Continue even if this fails, it's just a cache-busting attempt
-  }
-};
-
-export const createTask = async (projectId, taskData) => {
-  setupAuthHeader();
-  try {
-    console.log('Creating task with data:', taskData);
-    
-    // Create the task with all required fields
-    const response = await axios.post(
-      `${API_URL}/api/projects/${projectId}/tasks`,
-      {
-        title: taskData.title,
-        description: taskData.description || '',
-        status: taskData.status || 'todo',
-        priority: taskData.priority || 'low',
-        due_date: taskData.due_date || null,
-        cost: parseFloat(taskData.cost) || 0, // Ensure cost is always included as a number
-        completion_percentage: taskData.completion_percentage || 0
-      }
-    );
-    
-    console.log('Task created:', response.data);
-    const taskId = response.data.id;
-    
-    // If an assignee is specified, assign them to the task
-    if (taskData.assignee) {
-      await assignUserToTask(projectId, taskId, taskData.assignee);
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error('Task creation error details:', error);
-    const errorMessage = error.response?.data?.message || 'Failed to create task';
-    console.error('Error message:', errorMessage);
-    throw new Error(errorMessage);
-  }
-};
-
-export const updateTaskProgress = async (projectId, taskId, percentage) => {
-  setupAuthHeader();
-  try {
-    const response = await axios.put(
-      `${API_URL}/api/projects/${projectId}/tasks/${taskId}/progress`,
-      { completion_percentage: percentage }
-    );
-    return response.data;
-  } catch (error) {
-    console.error('Progress update error:', error);
-    throw error.response?.data?.message || 'Failed to update task progress';
-  }
-};
-
-export const updateTask = async (projectId, taskId, taskData) => {
-  setupAuthHeader();
-  try {
-    console.log('Updating task with data:', taskData);
-    
-    const updateData = {
-      title: taskData.title,
-      description: taskData.description || '',
-      status: taskData.status || 'todo',
-      priority: taskData.priority || 'low',
-      due_date: taskData.due_date || null,
-      cost: parseFloat(taskData.cost) || 0, // Ensure cost is always included
-      completion_percentage: taskData.completion_percentage || 0
-    };
-    
-    console.log('Sending update with data:', updateData);
-    
-    const response = await axios.put(
-      `${API_URL}/api/projects/${projectId}/tasks/${taskId}`,
-      updateData
-    );
-    
-    console.log('Task update response:', response.data);
-    
-    // Handle assignee changes separately
-    if (taskData.assignee) {
-      console.log(`Updating task assignee to user ID: ${taskData.assignee}`);
-      
-      try {
-        // Get current assigned users
-        const currentAssignedUsers = await fetchAssignedUsers(projectId, taskId);
-        
-        // If already assigned to someone, unassign first
-        if (currentAssignedUsers && currentAssignedUsers.length > 0) {
-          for (const user of currentAssignedUsers) {
-            await unassignUserFromTask(projectId, taskId, user.id);
-          }
-        }
-        
-        // Then assign to new user
-        await assignUserToTask(projectId, taskId, taskData.assignee);
-      } catch (assignmentError) {
-        console.error('Error updating task assignment:', assignmentError);
-        // Continue even if assignment fails - we don't want to fail the whole task update
-      }
-    }
-    
-    // Force refresh of the task data after all updates
-    await invalidateTaskCache(projectId, taskId);
-    
-    return response.data;
-  } catch (error) {
-    console.error('Task update error:', error);
-    const errorMessage = error.response?.data?.message || 'Failed to update task';
-    console.error('Error message:', errorMessage);
-    throw new Error(errorMessage);
-  }
-};
-
-export const deleteTask = async (projectId, taskId) => {
-  setupAuthHeader();
-  await axios.delete(`${API_URL}/api/projects/${projectId}/tasks/${taskId}`);
-};
-
-// Team-related functions
-
 export const fetchTeamMembers = async (projectId) => {
   setupAuthHeader();
   try {
     console.log('Fetching team members for project:', projectId);
     
-    // First verify the project exists and we have access
     const project = await fetchSingleProject(projectId);
     if (!project) {
       throw new Error('Project not found');
     }
 
-    // Return team members from the project data if available
     if (project.teamMembers && Array.isArray(project.teamMembers)) {
       console.log('Using team members from project data:', project.teamMembers);
       return project.teamMembers;
     }
 
-    // Fallback to separate team members endpoint
     const response = await axios.get(`${API_URL}/api/projects/${projectId}/team`);
     console.log('Team members API response:', response.data);
 
@@ -409,7 +179,6 @@ export const fetchTeamMembers = async (projectId) => {
       response: error.response?.data
     });
     
-    // Check for specific error cases
     if (error.response?.status === 401) {
       throw new Error('Your session has expired. Please login again.');
     }
@@ -452,7 +221,6 @@ export const sendTeamInvitation = async (projectId, userId) => {
   try {
     console.log('Sending invitation:', { projectId, userId });
 
-    // Validate and parse IDs
     const parsedProjectId = parseInt(projectId, 10);
     const parsedUserId = parseInt(userId, 10);
 
@@ -460,7 +228,6 @@ export const sendTeamInvitation = async (projectId, userId) => {
       throw new Error(`Invalid IDs: Project ID ${projectId}, User ID ${userId}`);
     }
 
-    // First check if user is already a member
     try {
       const teamMembers = await fetchTeamMembers(projectId);
       if (teamMembers.some(member => member.id === parsedUserId)) {
@@ -468,14 +235,11 @@ export const sendTeamInvitation = async (projectId, userId) => {
       }
     } catch (teamCheckError) {
       console.warn('Team check error:', teamCheckError);
-      // Continue even if the team check fails
     }
 
     console.log(`Sending invitation request to: ${API_URL}/api/projects/${parsedProjectId}/invitations`);
     console.log('With data:', { recipient_id: parsedUserId });
 
-    // Use the correct URL format matching the Laravel route
-    // and send a proper JSON request
     const response = await axios.post(
       `${API_URL}/api/projects/${parsedProjectId}/invitations`,
       {
@@ -492,7 +256,6 @@ export const sendTeamInvitation = async (projectId, userId) => {
     console.log('Invitation response:', response.data);
     
     if (response.data?.message) {
-      // Show success message from server
       return { success: true, message: response.data.message };
     }
 
@@ -509,7 +272,6 @@ export const sendTeamInvitation = async (projectId, userId) => {
       status: error.response?.status
     });
 
-    // Provide detailed error messages based on the response
     if (error.response?.status === 401) {
       throw new Error('Authentication failed. Please log in again.');
     } else if (error.response?.status === 403) {
@@ -524,7 +286,6 @@ export const sendTeamInvitation = async (projectId, userId) => {
       throw new Error(`Server error: ${error.response.data.message || 'Internal server error'}`);
     }
 
-    // Default error message with more context
     throw new Error(
       `Invitation failed (${error.response?.status || 'network error'}): ${
         error.response?.data?.message || 
@@ -532,51 +293,6 @@ export const sendTeamInvitation = async (projectId, userId) => {
         'Failed to send invitation'
       }`
     );
-  }
-};
-
-export const fetchAssignedUsers = async (projectId, taskId) => {
-  setupAuthHeader();
-  try {
-    console.log(`Fetching assigned users for task ${taskId} in project ${projectId}`);
-    
-    // Add a cache-busting parameter to ensure we get fresh data
-    const response = await axios.get(
-      `${API_URL}/api/projects/${projectId}/tasks/${taskId}/users?_=${Date.now()}`
-    );
-    console.log('Assigned users response:', response.data);
-    
-    // If there's no assigned users from dedicated endpoint, try to get from task data
-    if (!response.data || response.data.length === 0) {
-      const taskResponse = await axios.get(
-        `${API_URL}/api/projects/${projectId}/tasks/${taskId}?_=${Date.now()}`
-      );
-      if (taskResponse.data && taskResponse.data.user) {
-        // Return the assigned user from task data if available
-        return [taskResponse.data.user];
-      }
-    }
-    
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching assigned users:', {
-      status: error.response?.status,
-      data: error.response?.data
-    });
-    
-    // Try to get from task data if the endpoint fails
-    try {
-      const taskResponse = await axios.get(
-        `${API_URL}/api/projects/${projectId}/tasks/${taskId}?_=${Date.now()}`
-      );
-      if (taskResponse.data && taskResponse.data.user) {
-        return [taskResponse.data.user];
-      }
-    } catch (secondError) {
-      console.error('Secondary error fetching task data:', secondError);
-    }
-    
-    throw new Error(error.response?.data?.message || 'Failed to fetch assigned users');
   }
 };
 
@@ -648,23 +364,19 @@ export const fetchSingleProject = async (projectId) => {
       throw new Error('Project not found');
     }
 
-    // Get current user data
     const currentUser = JSON.parse(localStorage.getItem('user'));
     if (!currentUser) {
       throw new Error('No user data found');
     }
 
-    // Extract project data and ensure all IDs are strings for comparison
     const projectData = response.data;
     const currentUserId = String(currentUser.id);
     const projectUserId = String(projectData.user_id);
     
-    // Determine ownership and team membership
     const isOwner = currentUserId === projectUserId;
     const teamMembers = Array.isArray(projectData.teamMembers) ? projectData.teamMembers : [];
     const isTeamMember = teamMembers.some(member => String(member?.id) === currentUserId);
 
-    // Log debugging information
     console.log('Access check:', {
       currentUserId,
       projectUserId,
@@ -673,7 +385,6 @@ export const fetchSingleProject = async (projectId) => {
       teamMembers: teamMembers.map(m => m?.id)
     });
 
-    // Return formatted project data
     return {
       ...projectData,
       isOwner,
@@ -749,13 +460,10 @@ export const cancelTeamInvitation = async (invitationId) => {
   try {
     console.log(`Cancelling invitation with ID: ${invitationId}`);
     
-    // Call the server endpoint to cancel the invitation
-    // The backend will handle deleting its own notifications for the recipient
     const response = await axios.post(`${API_URL}/api/invitations/${invitationId}/cancel`);
     
     console.log('Cancellation response:', response.data);
     
-    // Return success information from the server
     return { 
       success: true, 
       message: response.data?.message || 'Invitation cancelled successfully',
@@ -767,7 +475,6 @@ export const cancelTeamInvitation = async (invitationId) => {
       error: error.response || error
     });
     
-    // Handle specific error cases
     if (error.response?.status === 403) {
       throw new Error('You do not have permission to cancel this invitation');
     }

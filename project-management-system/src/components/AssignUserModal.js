@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  fetchTeamMembers, 
   assignUserToTask, 
-  fetchAssignedUsers, 
+  fetchAssignedUsers,
   unassignUserFromTask 
-} from '../services/projectService';
+} from '../services/taskService';
+import { fetchTeamMembers } from '../services/projectService';
 import styles from '../componentsStyles/Modal.module.css';
 
 const AssignUserModal = ({ projectId, taskId, onClose }) => {
@@ -19,19 +19,21 @@ const AssignUserModal = ({ projectId, taskId, onClose }) => {
     const loadData = async () => {
       try {
         setLoading(true);
-        // Fetch team members
-        const members = await fetchTeamMembers(projectId);
+        // Load both team members and current assignee in parallel
+        const [members, assignedUsers] = await Promise.all([
+          fetchTeamMembers(projectId),
+          fetchAssignedUsers(projectId, taskId)
+        ]);
+        
         setTeamMembers(members);
         
-        // Fetch current assigned user for the task
-        const assignedUsers = await fetchAssignedUsers(projectId, taskId);
         if (assignedUsers && assignedUsers.length > 0) {
           setCurrentAssignee(assignedUsers[0]);
           setSelectedUserId(assignedUsers[0].id.toString());
         }
       } catch (err) {
         console.error('Error loading data for assignment:', err);
-        setError(err.message || 'Failed to load team members');
+        setError(err.message || 'Failed to load data');
       } finally {
         setLoading(false);
       }

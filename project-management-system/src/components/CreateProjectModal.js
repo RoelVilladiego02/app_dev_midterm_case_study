@@ -11,27 +11,14 @@ const CreateProjectModal = ({ onClose, onProjectCreated }) => {
     setIsLoading(true);
     setError('');
     try {
-      console.log('Creating project with data:', { 
-        ...projectData, 
-        status: 'pending',
-        total_budget: projectData.total_budget || 0,
-        actual_expenditure: 0
-      });
-      
-      await createProject({ 
-        ...projectData, 
-        status: 'pending',
-        total_budget: projectData.total_budget || 0,
-        actual_expenditure: 0
-      });
-      
+      await createProject(projectData);
       if (onProjectCreated) {
         await onProjectCreated();
       }
       onClose();
     } catch (err) {
       console.error('Failed to create project:', err);
-      setError(err.message || 'Failed to create project. Please try again.');
+      setError(err.message);
     } finally {
       setIsLoading(false);
     }

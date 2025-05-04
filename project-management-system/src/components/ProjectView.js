@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
-  fetchTasks, 
-  deleteTask, 
   fetchTeamMembers, 
   removeTeamMember,
   fetchSingleProject,
   fetchPendingInvitations,
-  cancelTeamInvitation  // Add this import from projectService
+  cancelTeamInvitation
 } from '../services/projectService';
+
+import {
+  fetchTasks,
+  deleteTask
+} from '../services/taskService';
+
 import styles from '../componentsStyles/ProjectView.module.css';
 import Header from './Header';
 import AssignUserModal from './AssignUserModal';
@@ -16,6 +20,10 @@ import TeamMemberModal from './TeamMemberModal';
 import BudgetDashboard from './BudgetDashboard';
 import TaskProgress from './TaskProgress';
 import EditProjectModal from './EditProjectModal';
+import CreateTaskModal from './CreateTaskModal';
+import EditTaskModal from './EditTaskModal';
+import TaskDebugger from './TaskDebugger';
+import AssignedUsersList from './AssignedUsersList';
 
 const ProjectView = () => {
   const [project, setProject] = useState(null);
@@ -33,6 +41,9 @@ const ProjectView = () => {
   const [errorPopup, setErrorPopup] = useState({ show: false, message: '' });
   const [showEditModal, setShowEditModal] = useState(false);
   const [pendingInvites, setPendingInvites] = useState([]);
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
 
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -122,11 +133,58 @@ const ProjectView = () => {
   };
   
   const handleAddTask = () => {
-    navigate(`/projects/${projectId}/tasks/create`);
+    setShowCreateTaskModal(true);
   };
-  
-  const handleEditTask = (taskId) => {
-    navigate(`/projects/${projectId}/tasks/${taskId}/edit`);
+
+  const handleTaskCreated = async () => {
+    try {
+      setShowCreateTaskModal(false);
+      const updatedTasks = await fetchTasks(projectId);
+      console.log('Updated tasks after creation:', updatedTasks);
+      setTasks(updatedTasks);
+      
+      // Show success message
+      setErrorPopup({
+        show: true,
+        message: 'Task created successfully'
+      });
+      setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
+    } catch (err) {
+      console.error('Error refreshing tasks:', err);
+      setErrorPopup({
+        show: true,
+        message: 'Failed to refresh tasks after creation'
+      });
+      setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
+    }
+  };
+
+  const handleEditTask = (task) => {
+    setSelectedTask(task);
+    setShowEditTaskModal(true);
+  };
+
+  const handleTaskUpdated = async () => {
+    try {
+      setShowEditTaskModal(false);
+      const updatedTasks = await fetchTasks(projectId);
+      setTasks(updatedTasks);
+      setSelectedTask(null);
+      
+      // Show success message
+      setErrorPopup({
+        show: true,
+        message: 'Task updated successfully'
+      });
+      setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
+    } catch (err) {
+      console.error('Error refreshing tasks:', err);
+      setErrorPopup({
+        show: true,
+        message: 'Failed to refresh tasks after update'
+      });
+      setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
+    }
   };
   
   const handleDeleteTask = async (taskId) => {
@@ -134,9 +192,20 @@ const ProjectView = () => {
       try {
         await deleteTask(projectId, taskId);
         setTasks(tasks.filter(task => task.id !== taskId));
+        
+        // Show success message
+        setErrorPopup({
+          show: true,
+          message: 'Task deleted successfully'
+        });
+        setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
       } catch (err) {
         console.error('Error deleting task:', err);
-        setError('Failed to delete task. Please try again.');
+        setErrorPopup({
+          show: true,
+          message: err.message || 'Failed to delete task'
+        });
+        setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
       }
     }
   };
@@ -352,10 +421,11 @@ const ProjectView = () => {
                         </span>
                       )}
                       <span className={styles.assignedUser}>
-                        Assigned to: {task.assigned_user ? task.assigned_user.name : 'Unassigned'}
-                      </span>
-                      <span className={styles.taskCost}>
-                        Cost: ${task.cost ? parseFloat(task.cost).toFixed(2) : '0.00'}
+                        <AssignedUsersList 
+                          projectId={projectId} 
+                          taskId={task.id} 
+                          assignedUser={task.assigned_user} 
+                        />
                       </span>
                     </div>
                   </div>
@@ -368,7 +438,7 @@ const ProjectView = () => {
                         {task.assigned_user ? 'Reassign' : 'Assign User'}
                       </button>
                       <button 
-                        onClick={() => handleEditTask(task.id)}
+                        onClick={() => handleEditTask(task)}
                         className={styles.editTaskButton}
                       >
                         Edit
@@ -386,6 +456,24 @@ const ProjectView = () => {
             </div>
           ) : (
             <p className={styles.emptyState}>No tasks yet.</p>
+          )}
+
+          {/* Add CreateTaskModal */}
+          {showCreateTaskModal && (
+            <CreateTaskModal
+              projectId={projectId}
+              teamMembers={teamMembers}
+              onClose={() => setShowCreateTaskModal(false)}
+              onTaskCreated={handleTaskCreated}
+              initialData={{
+                title: '',
+                description: '',
+                status: 'todo',
+                priority: 'medium',
+                due_date: '',
+                assignee: ''
+              }}
+            />
           )}
         </div>
 
@@ -422,7 +510,27 @@ const ProjectView = () => {
             onProjectUpdated={handleProjectUpdate}
           />
         )}
+
+        {/* Add the EditTaskModal */}
+        {showEditTaskModal && selectedTask && (
+          <EditTaskModal
+            projectId={projectId}
+            taskId={selectedTask.id}
+            task={selectedTask}
+            teamMembers={teamMembers}
+            onClose={() => {
+              setShowEditTaskModal(false);
+              setSelectedTask(null);
+            }}
+            onTaskUpdated={handleTaskUpdated}
+          />
+        )}
       </div>
+
+      {/* Add TaskDebugger component in development mode */}
+      {process.env.NODE_ENV === 'development' && (
+        <TaskDebugger projectId={projectId} />
+      )}
     </div>
   );
 };

@@ -45,3 +45,18 @@ h4 {
   color: #333;
   font-size: 1rem;
 }
+
+.assignedTo {
+  color: #666;
+  font-size: 0.9rem;
+  display: inline-block;
+  margin-left: 1rem;
+}
+
+.unassigned {
+  color: #999;
+  font-style: italic;
+  font-size: 0.9rem;
+  display: inline-block;
+  margin-left: 1rem;
+}

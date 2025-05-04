@@ -10,7 +10,9 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [debugInfo, setDebugInfo] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -19,9 +21,6 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
         setError('');
         
         const allUsers = await fetchAllUsers();
-        console.log('Fetched all users:', allUsers);
-        
-        // Filter out current team members and current user
         const currentUser = JSON.parse(localStorage.getItem('user'));
         const availableUsers = allUsers.filter(user => 
           !currentTeamMembers.some(member => member.id === user.id) &&
@@ -29,6 +28,7 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
         );
         
         setUsers(availableUsers);
+        setFilteredUsers(availableUsers);
       } catch (err) {
         console.error('Failed to load users:', err);
         setError('Failed to load available users. Please try again.');
@@ -40,6 +40,29 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
     loadUsers();
   }, [currentTeamMembers]);
 
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    setSelectedUser(null);
+    
+    if (!query.trim()) {
+      setFilteredUsers(users);
+      return;
+    }
+
+    const searchTerm = query.toLowerCase();
+    const filtered = users.filter(user => 
+      user.name.toLowerCase().includes(searchTerm) ||
+      user.email.toLowerCase().includes(searchTerm)
+    );
+    setFilteredUsers(filtered);
+  };
+
+  const handleUserSelect = (user) => {
+    setSelectedUser(user);
+    setSearchQuery(user.name);
+    setSelectedUserId(user.id.toString());
+  };
+
   const handleInvite = async (e) => {
     e.preventDefault();
     if (!selectedUserId) {
@@ -50,10 +73,8 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
     setIsLoading(true);
     setError('');
     setSuccess('');
-    setDebugInfo(null);
     
     try {
-      // Add validation for projectId and selectedUserId
       if (!projectId || isNaN(parseInt(projectId))) {
         throw new Error(`Invalid project ID: ${projectId}`);
       }
@@ -62,9 +83,6 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
         throw new Error(`Invalid user ID: ${selectedUserId}`);
       }
       
-      console.log('Sending invitation to user:', selectedUserId, 'for project:', projectId);
-      
-      // Check auth token before making the request
       const token = localStorage.getItem('auth_token');
       if (!token) {
         throw new Error('No authentication token found. Please login again.');
@@ -75,12 +93,10 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
       setSuccess(result.message || 'Invitation sent successfully!');
       setSelectedUserId('');
       
-      // If we have a team update callback, call it
       if (onTeamUpdate) {
         await onTeamUpdate();
       }
       
-      // Delay modal close to show success message
       setTimeout(() => {
         if (onClose) {
           onClose();
@@ -88,15 +104,7 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
       }, 1500);
     } catch (err) {
       console.error('Failed to send invitation:', err);
-      
-      // Enhanced error handling with debug info
       setError(err.message || 'Failed to send invitation. Please try again.');
-      setDebugInfo({
-        projectId,
-        selectedUserId,
-        errorType: err.name,
-        fullMessage: err.toString()
-      });
       
       if (err.message && (
         err.message.includes('authentication') || 
@@ -123,28 +131,40 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
           <p>Loading available users...</p>
         ) : (
           <form onSubmit={handleInvite}>
-            {users.length > 0 ? (
-              <select
-                value={selectedUserId}
-                onChange={(e) => setSelectedUserId(e.target.value)}
-                className={styles.select}
-                disabled={isLoading}
-              >
-                <option value="">Select a user to invite</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>
-                    {user.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p>No users available to invite.</p>
-            )}
+            <div className={styles.searchContainer}>
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+                className={styles.searchInput}
+                autoComplete="off"
+              />
+              
+              {searchQuery && !selectedUser && (
+                <div className={styles.searchResults}>
+                  {filteredUsers.length > 0 ? (
+                    filteredUsers.map(user => (
+                      <div
+                        key={user.id}
+                        className={styles.searchResultItem}
+                        onClick={() => handleUserSelect(user)}
+                      >
+                        <div className={styles.userName}>{user.name}</div>
+                        <div className={styles.userEmail}>{user.email}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={styles.noResults}>No users found</div>
+                  )}
+                </div>
+              )}
+            </div>
             
             <div className={styles.modalActions}>
               <button
                 type="submit"
-                disabled={!selectedUserId || isLoading || users.length === 0}
+                disabled={!selectedUser || isLoading}
                 className={styles.submitButton}
               >
                 {isLoading ? 'Sending Invitation...' : 'Send Invitation'}
@@ -159,16 +179,6 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
               </button>
             </div>
           </form>
-        )}
-        
-        {/* Debug information panel (can be removed in production) */}
-        {debugInfo && (
-          <div style={{ marginTop: '20px', padding: '10px', background: '#f0f0f0', borderRadius: '5px' }}>
-            <h4>Debug Information</h4>
-            <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px' }}>
-              {JSON.stringify(debugInfo, null, 2)}
-            </pre>
-          </div>
         )}
       </div>
     </div>

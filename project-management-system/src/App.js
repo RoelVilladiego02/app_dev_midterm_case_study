@@ -4,8 +4,6 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import Dashboard from './components/Dashboard';
 import ProjectView from './components/ProjectView';
-import CreateTask from './components/CreateTask';
-import UpdateTask from './components/UpdateTask';
 import './App.css';
 
 /**
@@ -48,24 +46,6 @@ function App() {
             element={
               <PrivateRoute>
                 <ProjectView />
-              </PrivateRoute>
-            }
-          />
-          
-          {/* Task routes */}
-          <Route
-            path="/projects/:projectId/tasks/create"
-            element={
-              <PrivateRoute>
-                <CreateTask />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/projects/:projectId/tasks/:taskId/edit"
-            element={
-              <PrivateRoute>
-                <UpdateTask />
               </PrivateRoute>
             }
           />

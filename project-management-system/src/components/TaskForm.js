@@ -1,37 +1,52 @@
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
-import styles from '../componentsStyles/TaskForm.module.css';
+import styles from '../componentsStyles/Modal.module.css';
 
-const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMode = false, budget = 0 }) => {
-  const [title, setTitle] = useState(initialData.title || '');
-  const [description, setDescription] = useState(initialData.description || '');
-  const [assignee, setAssignee] = useState(initialData.assignee || '');
-  const [status, setStatus] = useState(isEditMode ? initialData.status || 'todo' : 'todo');
-  const [priority, setPriority] = useState(initialData.priority || 'low');
-  const [dueDate, setDueDate] = useState(initialData.due_date || '');
-  const [completionPercentage, setCompletionPercentage] = useState(
-    initialData.completion_percentage || 0
-  );
-  const [cost, setCost] = useState(initialData.cost || 0);
+const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false }) => {
+  const [formData, setFormData] = useState({
+    title: initialData.title || '',
+    description: initialData.description || '',
+    priority: initialData.priority || 'medium',
+    due_date: initialData.due_date || '',
+    status: initialData.status || 'todo'  // Will only be used in edit mode
+  });
   const [errors, setErrors] = useState({});
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const validateForm = () => {
     const newErrors = {};
-    if (!title.trim()) newErrors.title = 'Title is required.';
-    if (title.length > 255) newErrors.title = 'Title cannot exceed 255 characters.';
-    if (!assignee) newErrors.assignee = 'Please select a team member to assign this task.';
-    if (!['low', 'medium', 'high'].includes(priority)) {
-      newErrors.priority = 'Invalid priority.';
+    
+    // Strict validation matching Laravel requirements
+    if (!formData.title?.trim()) {
+      newErrors.title = 'Title is required';
     }
     
-    // Ensure cost is a valid number
-    const costValue = parseFloat(cost);
-    if (isNaN(costValue) || costValue < 0) {
-      newErrors.cost = 'Cost must be a valid non-negative number.';
-    } else if (costValue > budget) {
-      newErrors.cost = 'Cost cannot exceed project budget.';
+    if (formData.title?.length > 255) {
+      newErrors.title = 'Title cannot exceed 255 characters';
     }
-    
+
+    if (!['todo', 'in_progress', 'completed'].includes(formData.status)) {
+      newErrors.status = 'Status must be one of: todo, in_progress, completed';
+    }
+
+    if (!['low', 'medium', 'high'].includes(formData.priority)) {
+      newErrors.priority = 'Priority must be one of: low, medium, high';
+    }
+
+    // Validate due date format
+    if (formData.due_date) {
+      const dueDate = new Date(formData.due_date);
+      if (isNaN(dueDate.getTime())) {
+        newErrors.due_date = 'Invalid date format';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -39,154 +54,107 @@ const TaskForm = ({ initialData = {}, users = [], onSubmit, isLoading, isEditMod
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateForm()) {
-      const taskData = {
-        title,
-        description,
-        assignee: parseInt(assignee, 10), // Ensure assignee is a number
-        status: isEditMode ? status : 'todo',
-        priority,
-        due_date: dueDate || null,
-        cost: parseFloat(cost) || 0, // Ensure cost is a number and has a default of 0
-        completion_percentage: completionPercentage // Include completion percentage
+      const submissionData = {
+        title: formData.title.trim(),
+        description: formData.description?.trim() || '',
+        status: formData.status || 'todo',
+        priority: formData.priority || 'medium',
+        due_date: formData.due_date || null,
+        completion_percentage: 0  // Add default completion percentage
       };
-      
-      console.log('Submitting task data:', taskData);
-      onSubmit(taskData);
+
+      console.log('Submitting task:', submissionData);
+      onSubmit(submissionData);
     }
   };
 
-  // Early return if no team members available
-  if (!users || users.length === 0) {
-    return (
-      <div className={styles.formError}>
-        <p>No team members available. Please add team members to the project first.</p>
-      </div>
-    );
-  }
-
   return (
-    <form className={styles.taskForm} onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className={styles.form}>
+      {Object.keys(errors).length > 0 && (
+        <div className={styles.errorContainer}>
+          {Object.keys(errors).map((key) => (
+            <p key={key} className={styles.error}>{errors[key]}</p>
+          ))}
+        </div>
+      )}
+      
       <div className={styles.formGroup}>
-        <label>Title</label>
+        <label htmlFor="title">Title *</label>
         <input
           type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          id="title"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          required
           maxLength="255"
-          required
         />
-        {errors.title && <p className={styles.error}>{errors.title}</p>}
       </div>
 
       <div className={styles.formGroup}>
-        <label>Description</label>
+        <label htmlFor="description">Description</label>
         <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          id="description"
+          name="description"
+          value={formData.description}
+          onChange={handleChange}
+          rows="3"
         />
       </div>
 
-      <div className={styles.formGroup}>
-        <label>Assignee</label>
-        <select
-          value={assignee} 
-          onChange={(e) => setAssignee(e.target.value)}
-          required
-        >
-          <option value="">Select a user</option>
-          {users.map((user) => (
-            <option key={user.id} value={user.id}>
-              {user.name}
-            </option>
-          ))}
-        </select>
-        {errors.assignee && <p className={styles.error}>{errors.assignee}</p>}
-      </div>
+      {/* Only show status field in edit mode */}
+      {isEditMode && (
+        <div className={styles.formGroup}>
+          <label htmlFor="status">Status *</label>
+          <select
+            id="status"
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            required
+          >
+            <option value="todo">To Do</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      )}
 
       <div className={styles.formGroup}>
-        <label>Status</label>
+        <label htmlFor="priority">Priority *</label>
         <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          required
-        >
-          <option value="todo">To Do</option>
-          <option value="in_progress">In Progress</option>
-          <option value="completed">Completed</option>
-        </select>
-        {errors.status && <p className={styles.error}>{errors.status}</p>}
-      </div>
-
-      <div className={styles.formGroup}>
-        <label>Priority</label>
-        <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value)}
+          id="priority"
+          name="priority"
+          value={formData.priority}
+          onChange={handleChange}
           required
         >
           <option value="low">Low</option>
           <option value="medium">Medium</option>
           <option value="high">High</option>
         </select>
-        {errors.priority && <p className={styles.error}>{errors.priority}</p>}
       </div>
 
       <div className={styles.formGroup}>
-        <label>Due Date</label>
+        <label htmlFor="due_date">Due Date</label>
         <input
           type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
+          id="due_date"
+          name="due_date"
+          value={formData.due_date}
+          onChange={handleChange}
         />
       </div>
 
-      <div className={styles.formGroup}>
-        <label>Completion Percentage</label>
-        <div className={styles.rangeGroup}>
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={completionPercentage}
-            onChange={(e) => setCompletionPercentage(parseInt(e.target.value, 10))}
-          />
-          <span>{completionPercentage}%</span>
-        </div>
-      </div>
-
-      <div className={styles.formGroup}>
-        <label>Cost</label>
-        <input
-          type="number"
-          step="0.01"
-          min="0"
-          max={budget}
-          value={cost}
-          onChange={(e) => setCost(e.target.value)}
-          required
-        />
-        {errors.cost && <p className={styles.error}>{errors.cost}</p>}
-        {budget > 0 && (
-          <small className={styles.budgetHint}>
-            Available budget: ${budget.toFixed(2)}
-          </small>
-        )}
-      </div>
-
-      <button type="submit" disabled={isLoading}>
-        {isLoading ? 'Saving...' : isEditMode ? 'Update Task' : 'Create Task'}
+      <button 
+        type="submit" 
+        disabled={isLoading}
+        className={styles.submitButton}
+      >
+        {isLoading ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Task' : 'Create Task')}
       </button>
     </form>
   );
-};
-
-TaskForm.propTypes = {
-  initialData: PropTypes.object,
-  users: PropTypes.array.isRequired,
-  onSubmit: PropTypes.func.isRequired,
-  isLoading: PropTypes.bool,
-  isEditMode: PropTypes.bool,
-  budget: PropTypes.number
 };
 
 export default TaskForm;

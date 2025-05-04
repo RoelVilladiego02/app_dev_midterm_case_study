@@ -12,18 +12,24 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
 
   const validateForm = () => {
     const newErrors = {};
+    const MAX_BUDGET = 999999999.99; // Maximum value for MySQL DECIMAL(10,2)
+    
     if (!title.trim()) newErrors.title = 'Title is required.';
     if (title.length > 255) newErrors.title = 'Title cannot exceed 255 characters.';
+    
     if (endDate && startDate && new Date(endDate) < new Date(startDate)) {
       newErrors.endDate = 'End date cannot be earlier than start date.';
     }
-    if (totalBudget && totalBudget < 0) {
-      newErrors.totalBudget = 'Budget cannot be negative.';
+    
+    if (totalBudget) {
+      const budgetValue = parseFloat(totalBudget);
+      if (budgetValue < 0) {
+        newErrors.totalBudget = 'Budget cannot be negative.';
+      } else if (budgetValue > MAX_BUDGET) {
+        newErrors.totalBudget = `Budget cannot exceed ${MAX_BUDGET.toLocaleString()}.`;
+      }
     }
-    // Add status validation for Laravel's accepted values
-    if (initialData.status && !['pending', 'in_progress', 'completed'].includes(initialData.status)) {
-      newErrors.status = 'Invalid status value';
-    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -32,13 +38,13 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
     e.preventDefault();
     if (validateForm()) {
       onSubmit({
-        title,
-        description,
-        start_date: startDate,
-        end_date: endDate,
-        status: initialData.status || 'pending', // Set default status to 'pending'
+        title: title.trim(),
+        description: description.trim() || null,
+        start_date: startDate || null,
+        end_date: endDate || null,
+        status: 'pending',
         total_budget: totalBudget ? parseFloat(totalBudget) : 0,
-        actual_expenditure: 0,
+        actual_expenditure: 0
       });
     }
   };
