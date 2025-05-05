@@ -41,4 +41,9 @@ class Task extends Model
     {
         return $this->hasMany(TaskFile::class);
     }
+
+    public function isAssignedUser(User $user)
+    {
+        return $this->assignedUsers()->where('users.id', $user->id)->exists();
+    }
 }

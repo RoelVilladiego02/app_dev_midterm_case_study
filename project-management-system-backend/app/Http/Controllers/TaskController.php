@@ -98,9 +98,12 @@ class TaskController extends Controller
             ->with(['assignedUsers', 'project'])
             ->findOrFail($taskId);
             
-        // Check if user has access to the task's project
-        if ($task->project->user_id !== auth()->id() && 
-            !$task->project->teamMembers()->where('user_id', auth()->id())->exists()) {
+        $user = auth()->user();
+        
+        // Allow access if user is:
+        // 1. Project owner, or
+        // 2. Assigned to the task
+        if ($task->project->user_id !== $user->id && !$task->isAssignedUser($user)) {
             return response()->json([
                 'message' => 'You do not have access to this task'
             ], 403);

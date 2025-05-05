@@ -43,19 +43,42 @@ class ProjectController extends Controller
     public function show($id)
     {
         try {
-            // Get the project with eager loading
-            $project = Project::with(['teamMembers', 'tasks', 'user'])->findOrFail($id);
+            // Get project with all necessary relationships
+            $project = Project::with([
+                'teamMembers',
+                'tasks' => function($query) {
+                    $query->with(['assignedUsers', 'comments.user']);
+                },
+                'user'
+            ])->findOrFail($id);
             
-            // Check if user is owner or team member
-            $isTeamMember = $project->teamMembers()->where('user_id', auth()->id())->exists();
+            // Check access
+            $user = auth()->user();
+            $isTeamMember = $project->teamMembers->contains('id', $user->id);
             
-            if ($project->user_id !== auth()->id() && !$isTeamMember) {
+            if ($project->user_id !== $user->id && !$isTeamMember) {
                 return response()->json([
                     'message' => 'You do not have access to this project'
                 ], 403);
             }
             
-            // Create a response with additional data
+            // Transform tasks to include proper assigned users
+            $transformedTasks = $project->tasks->map(function ($task) {
+                return [
+                    'id' => $task->id,
+                    'title' => $task->title,
+                    'description' => $task->description,
+                    'status' => $task->status,
+                    'priority' => $task->priority,
+                    'due_date' => $task->due_date,
+                    'created_at' => $task->created_at,
+                    'updated_at' => $task->updated_at,
+                    'assigned_user' => $task->assignedUsers->first(),
+                    'assignedUsers' => $task->assignedUsers,
+                    'comments' => $task->comments
+                ];
+            });
+
             $response = [
                 'id' => $project->id,
                 'title' => $project->title,
@@ -69,8 +92,9 @@ class ProjectController extends Controller
                 'total_budget' => $project->total_budget,
                 'actual_expenditure' => $project->actual_expenditure,
                 'teamMembers' => $project->teamMembers,
-                'tasks' => $project->tasks,
-                'owner' => $project->user
+                'tasks' => $transformedTasks,
+                'owner' => $project->user,
+                'current_user_role' => $project->user_id === $user->id ? 'owner' : 'team_member'
             ];
             
             return response()->json($response);
@@ -151,18 +175,28 @@ class ProjectController extends Controller
     {
         $user = auth()->user();
         
-        // Get projects owned by user
-        $ownedProjects = $user->projects;
+        // Get projects with minimal data for listing
+        $projects = Project::with(['user', 'teamMembers'])
+            ->where('user_id', $user->id)
+            ->orWhereHas('teamMembers', function($query) use ($user) {
+                $query->where('user_id', $user->id);
+            })
+            ->get()
+            ->map(function ($project) use ($user) {
+                return [
+                    'id' => $project->id,
+                    'title' => $project->title,
+                    'description' => $project->description,
+                    'status' => $project->status,
+                    'user_id' => $project->user_id,
+                    'created_at' => $project->created_at,
+                    'isOwner' => $project->user_id === $user->id,
+                    'role' => $project->user_id === $user->id ? 'owner' : 'team_member',
+                    'owner' => $project->user
+                ];
+            });
         
-        // Get projects where user is a team member
-        $teamProjects = Project::whereHas('teamMembers', function($query) use ($user) {
-            $query->where('user_id', $user->id);
-        })->get();
-        
-        // Merge and return unique projects
-        return response()->json(
-            $ownedProjects->merge($teamProjects)->unique('id')->values()
-        );
+        return response()->json($projects);
     }
 
     public function teamMembers(Project $project)

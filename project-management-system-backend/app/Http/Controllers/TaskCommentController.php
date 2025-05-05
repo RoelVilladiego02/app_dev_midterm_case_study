@@ -12,14 +12,38 @@ class TaskCommentController extends Controller
 {
     public function index(Task $task)
     {
+        $user = auth()->user();
+        
+        // Check if user is project owner or task assignee
+        $isOwner = $task->project->user_id === $user->id;
+        $isAssigned = $task->assignedUsers()->where('users.id', $user->id)->exists();
+
+        if (!$isOwner && !$isAssigned) {
+            return response()->json([
+                'message' => 'You do not have access to this task'
+            ], 403);
+        }
+
         return response()->json(
-            $task->comments()->orderBy('created_at', 'desc')->get()
+            $task->comments()->with('user')->orderBy('created_at', 'desc')->get()
         );
     }
 
     public function store(Request $request, Task $task)
     {
         try {
+            $user = auth()->user();
+            
+            // Check if user is project owner or task assignee
+            $isOwner = $task->project->user_id === $user->id;
+            $isAssigned = $task->assignedUsers()->where('users.id', $user->id)->exists();
+
+            if (!$isOwner && !$isAssigned) {
+                return response()->json([
+                    'message' => 'Only project owners and assigned users can comment on tasks'
+                ], 403);
+            }
+
             $validated = $request->validate([
                 'comment_text' => 'required|string|max:1000'
             ]);
@@ -59,7 +83,16 @@ class TaskCommentController extends Controller
 
     public function destroy(Task $task, TaskComment $comment)
     {
-        if ($comment->user_id !== auth()->id()) {
+        // Check project access first
+        if ($task->project->user_id !== auth()->id() && 
+            !$task->project->teamMembers()->where('user_id', auth()->id())->exists()) {
+            return response()->json([
+                'message' => 'You do not have access to this task'
+            ], 403);
+        }
+
+        // Then check comment ownership
+        if ($comment->user_id !== auth()->id() && $task->project->user_id !== auth()->id()) {
             return response()->json([
                 'message' => 'Unauthorized to delete this comment'
             ], 403);
