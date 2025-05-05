@@ -12,6 +12,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\TeamInvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\TaskCommentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -65,6 +66,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/projects/{project}/tasks/{task}/assign', [TaskController::class, 'assignUser']);
     Route::delete('/projects/{project}/tasks/{task}/unassign/{user}', [TaskController::class, 'unassignUser']);
     Route::get('/projects/{project}/tasks/{task}/users', [TaskController::class, 'assignedUsers']);
+    
+    // Task Comment routes
+    Route::get('/tasks/{task}/comments', [TaskCommentController::class, 'index']);
+    Route::post('/tasks/{task}/comments', [TaskCommentController::class, 'store']);
+    Route::delete('/tasks/{task}/comments/{comment}', [TaskCommentController::class, 'destroy']);
     
     // Team routes
     Route::get('/projects/{project}/team', [ProjectController::class, 'teamMembers']);

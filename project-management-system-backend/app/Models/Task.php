@@ -31,4 +31,9 @@ class Task extends Model
     {
         return $this->belongsToMany(User::class, 'task_user', 'task_id', 'user_id')->withTimestamps();
     }
+
+    public function comments()
+    {
+        return $this->hasMany(TaskComment::class)->with('user');
+    }
 }
