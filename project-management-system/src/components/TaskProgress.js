@@ -18,6 +18,16 @@ const TaskProgress = ({ tasks }) => {
   const completedTasks = tasks.filter(task => task.status === 'completed').length;
   const inProgressTasks = tasks.filter(task => task.status === 'in_progress').length;
 
+  // Helper function to get task completion based on status
+  const getTaskCompletion = (status) => {
+    switch (status) {
+      case 'completed': return 100;
+      case 'in_progress': return 50;
+      case 'todo':
+      default: return 0;
+    }
+  };
+
   // Helper function to get task bar color
   const getTaskColor = (status) => {
     switch (status) {
@@ -31,9 +41,40 @@ const TaskProgress = ({ tasks }) => {
   const getTaskPosition = (task) => {
     const startDate = new Date(task.created_at || today);
     const endDate = new Date(task.due_date || today);
-    const startOffset = ((startDate - timelineStart) / (1000 * 60 * 60 * 24)) / totalDays * 100;
-    const duration = (endDate - startDate) / (1000 * 60 * 60 * 24) / totalDays * 100;
-    return { left: `${startOffset}%`, width: `${duration}%` };
+
+    // If no due date, make task span 7 days from creation
+    const taskEndDate = task.due_date ? endDate : new Date(startDate.getTime() + (7 * 24 * 60 * 60 * 1000));
+    
+    // Calculate position percentage
+    const startOffset = Math.max(0, ((startDate - timelineStart) / (1000 * 60 * 60 * 24)) / totalDays * 100);
+    
+    // Calculate width percentage
+    const duration = Math.max(1, (taskEndDate - startDate) / (1000 * 60 * 60 * 24)) / totalDays * 100;
+    
+    // Ensure the task doesn't extend beyond timeline
+    const maxWidth = 100 - startOffset;
+    let finalWidth = Math.min(duration, maxWidth);
+
+    // Adjust width based on status
+    switch (task.status) {
+      case 'completed':
+        // Keep full width for completed tasks
+        break;
+      case 'in_progress':
+        // 50% of normal width for in_progress tasks
+        finalWidth = finalWidth * 0.5;
+        break;
+      case 'todo':
+      default:
+        // 1% of normal width for todo tasks
+        finalWidth = finalWidth * 0.01;
+        break;
+    }
+
+    return { 
+      left: `${startOffset}%`, 
+      width: `${finalWidth}%` 
+    };
   };
 
   // Generate timeline markers (monthly)
@@ -95,10 +136,10 @@ const TaskProgress = ({ tasks }) => {
                 >
                   <div 
                     className={styles.progressFill}
-                    style={{ width: `${task.completion_percentage || 0}%` }}
+                    style={{ width: `${getTaskCompletion(task.status)}%` }}
                   />
                   <span className={styles.taskInfo}>
-                    {task.completion_percentage || 0}% - {task.status}
+                    {getTaskCompletion(task.status)}% - {task.status}
                   </span>
                 </div>
               </div>

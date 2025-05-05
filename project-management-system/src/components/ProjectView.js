@@ -325,6 +325,7 @@ const ProjectView = () => {
             projectId={projectId}
             budget={budget}
             onUpdate={handleBudgetUpdate}
+            isOwner={isOwner}
           />
         )}
 

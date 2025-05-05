@@ -320,17 +320,10 @@ export const addExpenditure = async (projectId, amount, description) => {
   setupAuthHeader();
   try {
     const response = await axios.post(
-      `${API_URL}/api/projects/${projectId}/budget/expenditure`,
+      `${API_URL}/api/projects/${projectId}/expenses`,
       { 
         amount: parseFloat(amount),
-        description,
-        project_id: projectId,
-        date: new Date().toISOString()
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        description: description
       }
     );
 
@@ -495,9 +488,21 @@ export const fetchProjectExpenses = async (projectId) => {
   setupAuthHeader();
   try {
     const response = await axios.get(`${API_URL}/api/projects/${projectId}/expenses`);
-    return response.data;
+    // Return the data array if paginated, or the direct response data
+    return response.data.data || response.data;
   } catch (error) {
     console.error('Error fetching project expenses:', error);
     throw new Error(error.response?.data?.message || 'Failed to fetch expenses');
+  }
+};
+
+export const fetchBudgetHistory = async (projectId) => {
+  setupAuthHeader();
+  try {
+    const response = await axios.get(`${API_URL}/api/projects/${projectId}/budget/history`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching budget history:', error);
+    throw new Error(error.response?.data?.message || 'Failed to fetch budget history');
   }
 };

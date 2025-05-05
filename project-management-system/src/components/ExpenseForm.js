@@ -27,8 +27,16 @@ const ExpenseForm = ({ projectId, budget, onExpenseAdded }) => {
 
     setIsSubmitting(true);
     try {
-      await addExpenditure(projectId, expenseAmount, description);
-      onExpenseAdded();
+      const result = await addExpenditure(projectId, expenseAmount, description);
+      
+      // Update budget if response includes updated budget info
+      if (result.project_budget) {
+        onExpenseAdded(result.project_budget);
+      } else {
+        onExpenseAdded();
+      }
+      
+      // Clear form
       setAmount('');
       setDescription('');
     } catch (err) {
@@ -41,21 +49,21 @@ const ExpenseForm = ({ projectId, budget, onExpenseAdded }) => {
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
       <div className={styles.formGroup}>
+        <label>Description</label>
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+        />
+      </div>
+      <div className={styles.formGroup}>
         <label>Amount ($)</label>
         <input
           type="number"
           step="0.01"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          required
-        />
-      </div>
-      <div className={styles.formGroup}>
-        <label>Description</label>
-        <input
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
           required
         />
       </div>
