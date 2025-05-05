@@ -4,6 +4,7 @@ import styles from '../componentsStyles/AssignedUsers.module.css';
 
 const AssignedUsersList = ({ projectId, taskId, assignedUser }) => {
   const [assignedUsers, setAssignedUsers] = useState([]);
+  const currentUser = JSON.parse(localStorage.getItem('user'));
 
   useEffect(() => {
     const loadAssignedUsers = async () => {
@@ -26,9 +27,21 @@ const AssignedUsersList = ({ projectId, taskId, assignedUser }) => {
     return <span className={styles.unassigned}>No user assigned</span>;
   }
 
+  const formatUserName = (user) => {
+    if (user.id === currentUser?.id) {
+      return `${user.name} (you)`;
+    }
+    return user.name;
+  };
+
   return (
     <span className={styles.assignedTo}>
-      Assigned to: {assignedUsers.map(user => user.name).join(', ')}
+      Assigned to: {assignedUsers.map((user, index) => (
+        <React.Fragment key={user.id}>
+          {index > 0 && ', '}
+          {formatUserName(user)}
+        </React.Fragment>
+      ))}
     </span>
   );
 };

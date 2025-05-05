@@ -18,15 +18,17 @@ export const fetchTasks = async (projectId) => {
     const response = await axios.get(`${API_URL}/api/projects/${projectId}/tasks`);
     console.log('Tasks response:', response.data);
     
+    // Ensure we get assigned users for each task
     const tasksWithUsers = await Promise.all(response.data.map(async (task) => {
       try {
         const assignedUsers = await fetchAssignedUsers(projectId, task.id);
         return {
           ...task,
           assigned_user: assignedUsers.length > 0 ? assignedUsers[0] : null,
-          assignedUsers: assignedUsers
+          assignedUsers: assignedUsers // Store full array of assigned users
         };
       } catch (error) {
+        console.error(`Error fetching assigned users for task ${task.id}:`, error);
         return {
           ...task,
           assigned_user: null,
@@ -171,6 +173,7 @@ export const fetchAssignedUsers = async (projectId, taskId) => {
     const response = await axios.get(
       `${API_URL}/api/projects/${projectId}/tasks/${taskId}/users`
     );
+    console.log(`Assigned users for task ${taskId}:`, response.data);
     return response.data || [];
   } catch (error) {
     console.error('Error fetching assigned users:', error);

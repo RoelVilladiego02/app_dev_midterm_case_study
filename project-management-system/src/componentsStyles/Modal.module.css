@@ -42,7 +42,8 @@
   background: var(--color-white);
   padding: var(--modal-padding);
   border-radius: var(--radius-lg);
-  width: min(90%, 600px);
+  width: 90%;
+  max-width: 800px;
   max-height: 90vh;
   overflow-y: auto;
   position: relative;
@@ -271,6 +272,12 @@
   padding: 0.75rem;
   text-align: center;
   color: #6c757d;
+}
+
+.commentsSection {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-gray-300);
 }
 
 /* Responsive styles */

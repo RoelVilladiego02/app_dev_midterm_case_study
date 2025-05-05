@@ -24,6 +24,7 @@ import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal';
 import TaskDebugger from './TaskDebugger';
 import AssignedUsersList from './AssignedUsersList';
+import TaskComments from './TaskComments';
 
 const ProjectView = () => {
   const [project, setProject] = useState(null);
@@ -44,6 +45,7 @@ const ProjectView = () => {
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [expandedTaskId, setExpandedTaskId] = useState(null);
 
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -272,6 +274,46 @@ const ProjectView = () => {
     }
   };
 
+  const canAccessTask = (task) => {
+    if (!user) return false;
+    
+    // Convert IDs to strings for consistent comparison
+    const currentUserId = String(user.id);
+    
+    // Project owners can always access
+    if (isOwner) return true;
+  
+    // Check both assignment methods
+    const isAssigned = 
+      (task.assigned_user && String(task.assigned_user.id) === currentUserId) ||
+      (task.assignedUsers && 
+       task.assignedUsers.some(u => String(u.id) === currentUserId));
+  
+    return isAssigned;
+  };
+
+  const handleTaskClick = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+  
+    console.log('Task access check:', {
+      task,
+      currentUser: user,
+      isOwner,
+      isAssigned: canAccessTask(task)
+    });
+  
+    if (canAccessTask(task)) {
+      setExpandedTaskId(expandedTaskId === taskId ? null : taskId);
+    } else {
+      setErrorPopup({
+        show: true,
+        message: 'Only project owners and assigned users can view task details'
+      });
+      setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
+    }
+  };
+
   if (loading) return <div className={styles.loadingState}>Loading project data...</div>;
   if (error) return <div className={styles.errorState}>{error}</div>;
   if (!project) return <div className={styles.notFound}>Project not found</div>;
@@ -407,8 +449,14 @@ const ProjectView = () => {
           {tasks.length > 0 ? (
             <div className={styles.tasksList}>
               {tasks.map(task => (
-                <div key={task.id} className={styles.taskItem}>
-                  <div className={styles.taskContent}>
+                <div 
+                  key={task.id} 
+                  className={`${styles.taskItem} ${canAccessTask(task) ? styles.accessible : styles.restricted}`}
+                >
+                  <div 
+                    className={`${styles.taskContent} ${!canAccessTask(task) ? styles.disabled : ''}`} 
+                    onClick={() => handleTaskClick(task.id)}
+                  >
                     <h3>{task.title}</h3>
                     <p>{task.description}</p>
                     <div className={styles.taskMeta}>
@@ -430,6 +478,18 @@ const ProjectView = () => {
                       </span>
                     </div>
                   </div>
+                  
+                  {expandedTaskId === task.id && canAccessTask(task) && (
+                    <div className={styles.expandedContent}>
+                      <TaskComments 
+                        taskId={task.id} 
+                        assignedUser={task.assigned_user}
+                        currentUser={user}
+                        isProjectOwner={isOwner}
+                      />
+                    </div>
+                  )}
+                  
                   {isOwner && (
                     <div className={styles.taskActions}>
                       <button 
