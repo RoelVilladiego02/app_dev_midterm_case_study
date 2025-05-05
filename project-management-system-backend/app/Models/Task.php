@@ -36,4 +36,9 @@ class Task extends Model
     {
         return $this->hasMany(TaskComment::class)->with('user');
     }
+
+    public function files()
+    {
+        return $this->hasMany(TaskFile::class);
+    }
 }

@@ -13,6 +13,7 @@ use App\Http\Controllers\TeamInvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\TaskCommentController;
+use App\Http\Controllers\TaskFileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -71,6 +72,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tasks/{task}/comments', [TaskCommentController::class, 'index']);
     Route::post('/tasks/{task}/comments', [TaskCommentController::class, 'store']);
     Route::delete('/tasks/{task}/comments/{comment}', [TaskCommentController::class, 'destroy']);
+    
+    // Task File routes
+    Route::get('/tasks/{task}/files', [TaskFileController::class, 'index']);
+    Route::post('/tasks/{task}/files', [TaskFileController::class, 'store']);
+    Route::get('/tasks/{task}/files/{file}', [TaskFileController::class, 'show'])->name('tasks.files.download');
+    Route::delete('/tasks/{task}/files/{file}', [TaskFileController::class, 'destroy']);
     
     // Team routes
     Route::get('/projects/{project}/team', [ProjectController::class, 'teamMembers']);
