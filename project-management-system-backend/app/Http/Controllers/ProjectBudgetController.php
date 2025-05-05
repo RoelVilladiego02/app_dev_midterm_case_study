@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Project;
+use App\Models\BudgetHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProjectBudgetController extends Controller
 {
@@ -20,18 +22,43 @@ class ProjectBudgetController extends Controller
     {
         $validated = $request->validate([
             'total_budget' => 'required|numeric|min:0',
+            'description' => 'nullable|string|max:255'
         ]);
 
-        $project->update([
-            'total_budget' => $validated['total_budget'],
-        ]);
+        try {
+            DB::beginTransaction();
 
-        return response()->json([
-            'message' => 'Budget updated successfully',
-            'total_budget' => $project->total_budget,
-            'actual_expenditure' => $project->actual_expenditure,
-            'remaining_budget' => $project->remaining_budget,
-        ]);
+            $oldBudget = $project->total_budget;
+            $newBudget = $validated['total_budget'];
+            $difference = $newBudget - $oldBudget;
+
+            if ($difference > 0) {
+                BudgetHistory::create([
+                    'project_id' => $project->id,
+                    'amount' => $difference,
+                    'total_budget_after' => $newBudget,
+                    'description' => $validated['description'] ?? 'Budget increase',
+                    'user_id' => auth()->id()
+                ]);
+            }
+
+            $project->update([
+                'total_budget' => $newBudget
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Budget updated successfully',
+                'total_budget' => $project->total_budget,
+                'actual_expenditure' => $project->actual_expenditure,
+                'remaining_budget' => $project->remaining_budget,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Failed to update budget'], 500);
+        }
     }
 
     public function addExpenditure(Request $request, Project $project)
@@ -56,5 +83,15 @@ class ProjectBudgetController extends Controller
             'actual_expenditure' => $project->actual_expenditure,
             'remaining_budget' => $project->remaining_budget,
         ]);
+    }
+
+    public function getBudgetHistory(Project $project)
+    {
+        $history = BudgetHistory::where('project_id', $project->id)
+            ->with('user:id,name')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json($history);
     }
 }

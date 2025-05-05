@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Budget management routes
     Route::get('/projects/{project}/budget', [ProjectBudgetController::class, 'getBudget']);
     Route::put('/projects/{project}/budget', [ProjectBudgetController::class, 'updateBudget']);
+    Route::get('/projects/{project}/budget/history', [ProjectBudgetController::class, 'getBudgetHistory']);
     Route::post('/projects/{project}/budget/expenditure', [ProjectBudgetController::class, 'addExpenditure']);
 
     // Expense routes
