@@ -14,7 +14,68 @@ class NotificationController extends Controller
     {
         $user = auth()->user();
         return response()->json(
-            $user->notifications()->paginate(10)
+            $user->notifications()
+                ->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->through(function ($notification) {
+                    $data = $notification->data;
+                    
+                    // Add type for team invitations and file uploads
+                    switch ($notification->type) {
+                        case 'App\Notifications\TeamInvitationNotification':
+                            $data['type'] = 'team_invitation';
+                            break;
+                        case 'App\Notifications\TaskFileUploadNotification':
+                            $data['type'] = 'task_file_upload';
+                            break;
+                        case 'App\Notifications\TaskCommentNotification':
+                            $data['type'] = 'task_comment';
+                            break;
+                    }
+
+                    return [
+                        'id' => $notification->id,
+                        'type' => $notification->type,
+                        'data' => $data,
+                        'read_at' => $notification->read_at,
+                        'created_at' => $notification->created_at,
+                        'status' => $data['status'] ?? null,
+                        'invitation_status' => $data['invitation_status'] ?? null
+                    ];
+                })
+        );
+    }
+    
+    public function unread()
+    {
+        $user = auth()->user();
+        return response()->json(
+            $user->unreadNotifications()
+                ->orderBy('created_at', 'desc')
+                ->paginate(15)
+                ->through(function ($notification) {
+                    $data = $notification->data;
+                    
+                    // Add type mapping
+                    switch ($notification->type) {
+                        case 'App\Notifications\TeamInvitationNotification':
+                            $data['type'] = 'team_invitation';
+                            break;
+                        case 'App\Notifications\TaskFileUploadNotification':
+                            $data['type'] = 'task_file_upload';
+                            break;
+                        case 'App\Notifications\TaskCommentNotification':
+                            $data['type'] = 'task_comment';
+                            break;
+                    }
+
+                    return [
+                        'id' => $notification->id,
+                        'type' => $notification->type,
+                        'data' => $data,
+                        'created_at' => $notification->created_at
+                    ];
+                })
         );
     }
     
@@ -42,10 +103,17 @@ class NotificationController extends Controller
         $notificationData = $notification->data;
         $notificationData['status'] = 'handled';
         
-        if (isset($notificationData['invitation_id'])) {
-            $status = $request->input('status', 'handled');
-            $notificationData['invitation_status'] = $status;
-            $notificationData['cancelled_at'] = $status === 'cancelled' ? now() : null;
+        if (isset($notificationData['type'])) {
+            switch ($notificationData['type']) {
+                case 'task_comment':
+                    $notificationData['status'] = 'read';
+                    break;
+                case 'team_invitation':
+                    $status = $request->input('status', 'handled');
+                    $notificationData['invitation_status'] = $status;
+                    $notificationData['cancelled_at'] = $status === 'cancelled' ? now() : null;
+                    break;
+            }
         }
         
         $notification->data = $notificationData;

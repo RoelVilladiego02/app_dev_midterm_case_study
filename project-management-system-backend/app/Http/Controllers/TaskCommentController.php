@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\TaskComment;
-use App\Notifications\TaskCommentAdded;
+use App\Notifications\TaskCommentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -34,11 +34,7 @@ class TaskCommentController extends Controller
         try {
             $user = auth()->user();
             
-            // Check if user is project owner or task assignee
-            $isOwner = $task->project->user_id === $user->id;
-            $isAssigned = $task->assignedUsers()->where('users.id', $user->id)->exists();
-
-            if (!$isOwner && !$isAssigned) {
+            if ($task->project->user_id !== $user->id && !$task->isAssignedUser($user)) {
                 return response()->json([
                     'message' => 'Only project owners and assigned users can comment on tasks'
                 ], 403);
@@ -53,16 +49,31 @@ class TaskCommentController extends Controller
                 'comment_text' => $validated['comment_text']
             ]);
 
-            // Load the relationships needed for notification
-            $comment->load(['task', 'user']);
+            $comment->load(['task.project', 'user']);
 
-            // Notify all assigned users except the commenter
-            $task->assignedUsers()
-                ->where('users.id', '!=', auth()->id())
-                ->get()
-                ->each(function ($user) use ($comment) {
-                    $user->notify(new TaskCommentAdded($comment));
-                });
+            // Determine who should be notified
+            if ($user->id === $task->project->user_id) {
+                // Project owner commented - notify assigned users
+                $task->assignedUsers()
+                    ->where('users.id', '!=', $user->id)
+                    ->get()
+                    ->each(function ($assignedUser) use ($comment) {
+                        $assignedUser->notify(new TaskCommentNotification($comment));
+                    });
+            } else {
+                // Team member commented - notify project owner and other assigned users
+                $projectOwner = $task->project->user;
+                if ($projectOwner->id !== $user->id) {
+                    $projectOwner->notify(new TaskCommentNotification($comment));
+                }
+                
+                $task->assignedUsers()
+                    ->where('users.id', '!=', $user->id)
+                    ->get()
+                    ->each(function ($assignedUser) use ($comment) {
+                        $assignedUser->notify(new TaskCommentNotification($comment));
+                    });
+            }
 
             return response()->json([
                 'message' => 'Comment added successfully',

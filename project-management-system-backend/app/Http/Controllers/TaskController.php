@@ -36,7 +36,6 @@ class TaskController extends Controller
     public function store(Request $request, $projectId)
     {
         try {
-            // Log incoming request data
             Log::info('Creating task - Received data:', [
                 'project_id' => $projectId,
                 'request_data' => $request->all()
@@ -44,24 +43,19 @@ class TaskController extends Controller
 
             $project = Project::findOrFail($projectId);
 
-            // Validate with more flexible rules
+            // Updated validation rules
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
                 'description' => 'nullable|string',
-                'status' => 'required|string|in:todo,in_progress,completed',
-                'priority' => 'required|string|in:low,medium,high',
-                'due_date' => 'nullable|date_format:Y-m-d|after_or_equal:today',
-                'project_id' => 'nullable|exists:projects,id' // Allow but not required
+                'priority' => 'required|in:low,medium,high',
+                'due_date' => 'nullable|date',
+                'status' => 'nullable|in:todo,in_progress,completed' // Make status optional
             ]);
 
-            // Clean up the data
-            $taskData = array_filter([
-                'title' => trim($validated['title']),
-                'description' => trim($validated['description'] ?? ''),
-                'status' => $validated['status'],
-                'priority' => $validated['priority'],
-                'due_date' => $validated['due_date'] ?? null,
-                'project_id' => $projectId // Ensure project_id is set
+            // Set default status if not provided
+            $taskData = array_merge($validated, [
+                'status' => $validated['status'] ?? 'todo',
+                'project_id' => $projectId
             ]);
 
             $task = $project->tasks()->create($taskData);
