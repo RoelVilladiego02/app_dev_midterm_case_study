@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\TaskFile;
+use App\Notifications\TaskFileUploadNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -33,6 +34,8 @@ class TaskFileController extends Controller
             }
 
             $file = $request->file('file');
+            $currentUser = auth()->user();
+            $project = $task->project;
 
             // Validate file
             if (!in_array($file->getMimeType(), $this->allowedMimeTypes)) {
@@ -49,12 +52,36 @@ class TaskFileController extends Controller
 
             // Create database record
             $taskFile = $task->files()->create([
-                'uploaded_by' => auth()->id(),
+                'uploaded_by' => $currentUser->id,
                 'file_name' => $file->getClientOriginalName(),
                 'file_path' => $filePath,
                 'mime_type' => $file->getMimeType(),
                 'file_size' => $file->getSize()
             ]);
+
+            // Send notifications
+            if ($currentUser->id !== $project->user_id) {
+                // Notify project owner if uploader is not owner
+                $project->user->notify(new TaskFileUploadNotification(
+                    $task,
+                    $project,
+                    $currentUser,
+                    $file->getClientOriginalName()
+                ));
+            }
+
+            // Notify other assigned users
+            $task->assignedUsers()
+                ->where('users.id', '!=', $currentUser->id)
+                ->get()
+                ->each(function ($user) use ($task, $project, $currentUser, $file) {
+                    $user->notify(new TaskFileUploadNotification(
+                        $task,
+                        $project,
+                        $currentUser,
+                        $file->getClientOriginalName()
+                    ));
+                });
 
             return response()->json([
                 'message' => 'File uploaded successfully',

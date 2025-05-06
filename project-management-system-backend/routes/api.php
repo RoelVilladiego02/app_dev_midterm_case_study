@@ -93,10 +93,11 @@ Route::middleware('auth:sanctum')->group(function () {
     
     // Notification routes
     Route::get('notifications', [NotificationController::class, 'index']);
+    Route::get('notifications/unread', [NotificationController::class, 'unread']);
     Route::post('notifications/{id}/read', [NotificationController::class, 'markAsRead']);
     Route::patch('notifications/{id}', [NotificationController::class, 'markAsHandled']);
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
-    Route::post('notifications/cleanup', [NotificationController::class, 'cleanupStaleNotifications']); // Add this line
+    Route::post('notifications/cleanup', [NotificationController::class, 'cleanupStaleNotifications']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
