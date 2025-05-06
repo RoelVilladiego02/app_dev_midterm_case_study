@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from '../componentsStyles/Dashboard.module.css';
 import Header from './Header';
-import { fetchProjects, deleteProject } from '../services/projectService';
+import { fetchProjects, deleteProject, updateProject } from '../services/projectService';
+import { fetchTasks } from '../services/taskService';
 import CreateProjectModal from './CreateProjectModal';
 import EditProjectModal from './EditProjectModal';
 
@@ -34,18 +35,28 @@ const Dashboard = () => {
           setUser(JSON.parse(userData));
         }
 
-        // Load projects with better error handling
-        console.log('Initiating project fetch...');
         const projectsData = await fetchProjects();
         
-        // Handle empty projects array gracefully
-        if (!projectsData || projectsData.length === 0) {
-          console.log('No projects found');
-          setProjects([]);
-        } else {
-          console.log(`Successfully loaded ${projectsData.length} projects`);
-          setProjects(projectsData);
-        }
+        // Update projects with correct status based on tasks
+        const updatedProjects = await Promise.all(projectsData.map(async (project) => {
+          try {
+            // Check if project has tasks
+            const projectTasks = await fetchTasks(project.id);
+            if (projectTasks && projectTasks.length > 0) {
+              // Update project status to 'in_progress' if it's still 'pending'
+              if (project.status === 'pending') {
+                await updateProject(project.id, { ...project, status: 'in_progress' });
+                return { ...project, status: 'in_progress' };
+              }
+            }
+            return project;
+          } catch (err) {
+            console.error(`Error checking tasks for project ${project.id}:`, err);
+            return project;
+          }
+        }));
+
+        setProjects(updatedProjects);
         
       } catch (err) {
         console.error('Dashboard load error:', err);

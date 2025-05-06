@@ -22,9 +22,9 @@ import TaskProgress from './TaskProgress';
 import EditProjectModal from './EditProjectModal';
 import CreateTaskModal from './CreateTaskModal';
 import EditTaskModal from './EditTaskModal';
-import TaskDebugger from './TaskDebugger';
 import AssignedUsersList from './AssignedUsersList';
 import TaskComments from './TaskComments';
+import TaskFiles from './TaskFiles';
 
 const ProjectView = () => {
   const [project, setProject] = useState(null);
@@ -337,12 +337,16 @@ const ProjectView = () => {
           <div>
             <h1>{project.title}</h1>
             <p className={styles.description}>{project.description}</p>
-            {project.deadline && (
-              <p className={styles.deadline}>
-                Deadline: {new Date(project.deadline).toLocaleDateString()
-                }
+            <div className={styles.projectMeta}>
+              <p className={`${styles.status} ${styles[project.status]}`}>
+                Status: {project.status.replace('_', ' ')}
               </p>
-            )}
+              {project.deadline && (
+                <p className={styles.deadline}>
+                  Deadline: {new Date(project.deadline).toLocaleDateString()}
+                </p>
+              )}
+            </div>
             <p className={styles.projectRole}>
               Your role: {isOwner ? 'Project Owner' : 'Team Member'}
             </p>
@@ -487,6 +491,7 @@ const ProjectView = () => {
                         currentUser={user}
                         isProjectOwner={isOwner}
                       />
+                      <TaskFiles taskId={task.id} />
                     </div>
                   )}
                   
@@ -588,10 +593,6 @@ const ProjectView = () => {
         )}
       </div>
 
-      {/* Add TaskDebugger component in development mode */}
-      {process.env.NODE_ENV === 'development' && (
-        <TaskDebugger projectId={projectId} />
-      )}
     </div>
   );
 };

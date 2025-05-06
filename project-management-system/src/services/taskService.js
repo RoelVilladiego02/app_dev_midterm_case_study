@@ -47,29 +47,15 @@ export const fetchTasks = async (projectId) => {
 export const createTask = async (projectId, taskData) => {
   setupAuthHeader();
   try {
+    console.log('Creating task with data:', taskData);
+    
     const formattedTaskData = {
       title: taskData.title?.trim(),
       description: taskData.description?.trim() || '',
-      status: 'todo',  // Always set to 'todo'
       priority: taskData.priority || 'medium',
       due_date: taskData.due_date || null,
-      project_id: projectId
+      status: 'todo'  // Always set initial status as todo
     };
-
-    // Validate required fields
-    if (!formattedTaskData.title) {
-      throw new Error('Title is required');
-    }
-
-    if (!['low', 'medium', 'high'].includes(formattedTaskData.priority)) {
-      throw new Error('Invalid priority value');
-    }
-
-    console.log('Creating task:', {
-      projectId,
-      taskData,
-      endpoint: `${API_URL}/api/projects/${projectId}/tasks`
-    });
 
     const response = await axios.post(
       `${API_URL}/api/projects/${projectId}/tasks`,
@@ -82,24 +68,16 @@ export const createTask = async (projectId, taskData) => {
       }
     );
 
-    console.log('Full server response:', response); // Add this line
-    
-    if (!response.data.task) {
-      throw new Error('Invalid response format from server');
-    }
-
     return {
       success: true,
       task: response.data.task
     };
   } catch (error) {
-    console.error('Full error object:', error); // Add this line
-    if (error.response) {
-      console.error('Error response data:', error.response.data);
-      console.error('Error status:', error.response.status);
-      console.error('Error headers:', error.response.headers);
-    }
-    throw error;
+    console.error('Task creation error:', {
+      status: error.response?.status,
+      data: error.response?.data
+    });
+    throw new Error(error.response?.data?.message || 'Failed to create task');
   }
 };
 

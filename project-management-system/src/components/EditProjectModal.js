@@ -24,6 +24,27 @@ const EditProjectModal = ({ project, onClose, onProjectUpdated }) => {
     }
   };
 
+  const handleCompleteProject = async () => {
+    if (!window.confirm('Are you sure you want to mark this project as completed? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    try {
+      await updateProject(project.id, { ...project, status: 'completed' });
+      if (onProjectUpdated) {
+        await onProjectUpdated();
+      }
+      onClose();
+    } catch (err) {
+      console.error('Failed to complete project:', err);
+      setError(err.message || 'Failed to complete project. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className={styles.modalOverlay}>
       <div className={styles.modalContent}>
@@ -32,10 +53,22 @@ const EditProjectModal = ({ project, onClose, onProjectUpdated }) => {
           <button onClick={onClose} className={styles.closeButton}>×</button>
         </div>
         {error && <p className={styles.error}>{error}</p>}
+        {project.status !== 'completed' && (
+          <div className={styles.completeProjectSection}>
+            <button 
+              onClick={handleCompleteProject}
+              className={styles.completeButton}
+              disabled={isLoading}
+            >
+              Mark Project as Completed
+            </button>
+          </div>
+        )}
         <ProjectForm 
           initialData={project}
           onSubmit={handleSubmit} 
-          isLoading={isLoading} 
+          isLoading={isLoading}
+          isCompleted={project.status === 'completed'} 
         />
       </div>
     </div>

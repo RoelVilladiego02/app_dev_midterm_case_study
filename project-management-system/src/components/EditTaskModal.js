@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import TaskForm from './TaskForm';
-import TaskComments from './TaskComments';
 import { updateTask, fetchAssignedUsers } from '../services/taskService';
 import { fetchTeamMembers } from '../services/projectService';
 import styles from '../componentsStyles/Modal.module.css';
@@ -97,11 +96,6 @@ const EditTaskModal = ({ projectId, taskId, task, onClose, onTaskUpdated }) => {
           isLoading={isLoading}
           isEditMode={true}
         />
-        
-        <div className={styles.commentsSection}>
-          <h3>Comments</h3>
-          <TaskComments taskId={taskId} />
-        </div>
       </div>
     </div>
   );

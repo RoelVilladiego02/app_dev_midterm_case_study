@@ -4,6 +4,7 @@ import LoginPage from './components/LoginPage';
 import RegisterPage from './components/RegisterPage';
 import Dashboard from './components/Dashboard';
 import ProjectView from './components/ProjectView';
+import NotificationsPage from './components/NotificationsPage';
 import './App.css';
 
 /**
@@ -46,6 +47,16 @@ function App() {
             element={
               <PrivateRoute>
                 <ProjectView />
+              </PrivateRoute>
+            }
+          />
+
+          {/* Notifications route */}
+          <Route
+            path="/notifications"
+            element={
+              <PrivateRoute>
+                <NotificationsPage />
               </PrivateRoute>
             }
           />

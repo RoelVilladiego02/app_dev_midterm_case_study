@@ -59,78 +59,50 @@ export const respondToInvitation = async (invitationId, accept) => {
   }
 };
 
-export const fetchNotifications = async () => {
+export const fetchNotifications = async (page = 1) => {
   setupAuthHeader();
   try {
-    const response = await axios.get(`${API_URL}/api/notifications`);
-    const notifications = response.data.data || response.data || [];
+    const response = await axios.get(`${API_URL}/api/notifications?page=${page}`);
     
-    // Get all team invitation notifications
-    const invitationNotifications = notifications.filter(notification => {
-      // Skip if notification doesn't exist
-      if (!notification) return false;
+    if (!response.data) {
+      return { data: [], meta: { current_page: 1, last_page: 1 } };
+    }
 
-      // Skip if notification is deleted
-      if (notification.deleted_at) return false;
-
-      if (notification.type && notification.type.includes('TeamInvitationNotification')) {
-        const data = notification.data || {};
-        
-        // Double check the actual invitation still exists and is pending
-        // This handles the race condition where notification exists but invitation was deleted
-        if (data.invitation_id) {
-          try {
-            // Perform a quick check for the invitation status without blocking
-            // This runs asynchronously and doesn't affect the current filtering
-            checkInvitationStatus(data.invitation_id, notification.id);
-          } catch (error) {
-            console.warn('Failed to verify invitation status:', error);
-          }
-        }
-        
-        // Don't show notifications for:
-        // 1. Deleted invitations
-        // 2. Cancelled invitations
-        // 3. Already handled invitations
-        // 4. Already read notifications 
-        // 5. Invitations with invalid status
-        if (data.is_deleted) return false;
-        if (data.status === 'cancelled') return false;
-        if (data.status === 'handled') return false;
-        if (data.invitation_status === 'cancelled') return false;
-        if (data.cancelled_at) return false;
-        if (notification.read_at) return false;
-
-        // Only show pending invitations
-        return data.invitation_status === 'pending' || !data.invitation_status;
+    return {
+      data: response.data.data || [],
+      meta: {
+        current_page: response.data.current_page,
+        last_page: response.data.last_page,
+        total: response.data.total,
+        per_page: response.data.per_page
       }
-      
-      // For non-invitation notifications, only show unread ones
-      return !notification.read_at;
-    });
-    
-    return invitationNotifications;
+    };
   } catch (error) {
-    console.error('Error fetching notifications:', error.response?.data);
-    throw error.response?.data?.message || 'Failed to fetch notifications';
+    console.error('Notification fetch error:', error);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    throw error;
   }
 };
 
-// New function to verify invitation status and delete stale notifications
-const checkInvitationStatus = async (invitationId, notificationId) => {
+export const fetchUnreadNotifications = async () => {
+  setupAuthHeader();
   try {
-    // Try to fetch the invitation - if it doesn't exist anymore, clean up the notification
-    await axios.get(`${API_URL}/api/invitations/${invitationId}`);
-  } catch (error) {
-    // If invitation not found (status 404), delete the notification
-    if (error.response?.status === 404) {
-      console.log(`Removing stale notification ${notificationId} for non-existent invitation ${invitationId}`);
-      try {
-        await deleteNotification(notificationId);
-      } catch (deleteError) {
-        console.error('Failed to delete stale notification:', deleteError);
+    const response = await axios.get(`${API_URL}/api/notifications/unread`);
+    return {
+      data: response.data.data || [],
+      meta: {
+        current_page: response.data.current_page,
+        last_page: response.data.last_page,
+        total: response.data.total
       }
-    }
+    };
+  } catch (error) {
+    console.error('Unread notification fetch error:', error);
+    throw error;
   }
 };
 
@@ -159,12 +131,12 @@ export const markNotificationAsHandled = async (notificationId, status = 'handle
   }
 };
 
-// Add a new function to check notifications periodically
+// Update the polling function to use unread notifications
 export const startNotificationPolling = (callback, interval = 10000) => {
   const pollTimer = setInterval(async () => {
     try {
-      const notifications = await fetchNotifications();
-      callback(notifications);
+      const response = await fetchUnreadNotifications();
+      callback(response);
     } catch (error) {
       console.error('Notification polling error:', error);
     }

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import styles from '../componentsStyles/ProjectForm.module.css';
 
-const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
+const ProjectForm = ({ initialData = {}, onSubmit, isLoading, isCompleted = false }) => {
   const [title, setTitle] = useState(initialData.title || '');
   const [description, setDescription] = useState(initialData.description || '');
   const [startDate, setStartDate] = useState(initialData.start_date || '');
@@ -59,6 +59,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
           onChange={(e) => setTitle(e.target.value)}
           maxLength="255"
           required
+          disabled={isCompleted}
         />
         {errors.title && <p className={styles.error}>{errors.title}</p>}
       </div>
@@ -68,6 +69,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
+          disabled={isCompleted}
         />
       </div>
 
@@ -77,6 +79,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
+          disabled={isCompleted}
         />
       </div>
 
@@ -86,6 +89,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
+          disabled={isCompleted}
         />
         {errors.endDate && <p className={styles.error}>{errors.endDate}</p>}
       </div>
@@ -99,13 +103,20 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading }) => {
           value={totalBudget}
           onChange={(e) => setTotalBudget(e.target.value)}
           placeholder="Enter project budget"
+          disabled={isCompleted}
         />
         {errors.totalBudget && <p className={styles.error}>{errors.totalBudget}</p>}
       </div>
 
-      <button type="submit" disabled={isLoading} className={styles.submitButton}>
-        {isLoading ? 'Saving...' : 'Save Project'}
-      </button>
+      {isCompleted ? (
+        <p className={styles.completedMessage}>
+          This project is marked as completed and cannot be edited.
+        </p>
+      ) : (
+        <button type="submit" disabled={isLoading} className={styles.submitButton}>
+          {isLoading ? 'Saving...' : 'Save Project'}
+        </button>
+      )}
     </form>
   );
 };
@@ -114,6 +125,7 @@ ProjectForm.propTypes = {
   initialData: PropTypes.object,
   onSubmit: PropTypes.func.isRequired,
   isLoading: PropTypes.bool,
+  isCompleted: PropTypes.bool,
 };
 
 export default ProjectForm;

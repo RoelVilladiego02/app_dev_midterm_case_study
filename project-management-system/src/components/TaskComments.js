@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fetchTaskComments, addTaskComment, deleteTaskComment } from '../services/taskCommentService';
+import { fetchNotifications } from '../services/notificationService';
 import styles from '../componentsStyles/TaskComments.module.css';
 
 const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => {
@@ -53,6 +54,16 @@ const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => 
       setComments([result.comment, ...comments]);
       setNewComment('');
       setError('');
+      
+      // Force refresh notifications after adding a comment
+      try {
+        const notificationResponse = await fetchNotifications();
+        if (window.updateNotifications && typeof window.updateNotifications === 'function') {
+          window.updateNotifications(notificationResponse);
+        }
+      } catch (notificationError) {
+        console.error('Failed to refresh notifications:', notificationError);
+      }
     } catch (err) {
       setError('Failed to add comment');
       console.error('Error adding comment:', err);

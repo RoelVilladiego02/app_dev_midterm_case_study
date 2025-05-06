@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  fetchNotifications, 
+  fetchUnreadNotifications, 
   respondToInvitation, 
   markNotificationAsRead,
   startNotificationPolling 
@@ -11,30 +11,18 @@ import styles from '../componentsStyles/Header.module.css';
 
 const Header = ({ user }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [processingIds, setProcessingIds] = useState([]); // Track which notifications are being processed
 
-  useEffect(() => {
-    // Initial load
-    loadNotifications();
-
-    // Start polling for new notifications
-    const stopPolling = startNotificationPolling((newNotifications) => {
-      setNotifications(newNotifications);
-    });
-
-    // Cleanup polling on component unmount
-    return () => stopPolling();
-  }, []);
-
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const notificationsData = await fetchNotifications();
-      setNotifications(notificationsData);
+      const response = await fetchUnreadNotifications();
+      setNotifications(response.data || []);
       setError('');
     } catch (error) {
       console.error('Failed to load notifications:', error);
@@ -43,6 +31,20 @@ const Header = ({ user }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Initial load
+    loadNotifications();
+
+    // Start polling for new notifications
+    const stopPolling = startNotificationPolling((response) => {
+      // Extract notifications array from paginated response
+      setNotifications(response.data || []);
+    });
+
+    // Cleanup polling on component unmount
+    return () => stopPolling();
+  }, []);
 
   const handleInvitationResponse = async (notification, accept) => {
     try {
@@ -69,6 +71,82 @@ const Header = ({ user }) => {
       // Remove from processing state
       setProcessingIds(prev => prev.filter(id => id !== notification.id));
     }
+  };
+
+  const handleViewTask = (projectId, taskId) => {
+    setShowNotifications(false);
+    navigate(`/projects/${projectId}`);
+    // Mark notification as read
+    const currentNotification = notifications.find(n => n.data.task_id === taskId);
+    if (currentNotification) {
+      markNotificationAsRead(currentNotification.id);
+    }
+  };
+
+  const handleSeeAllNotifications = () => {
+    setShowNotifications(false);
+    navigate('/notifications');
+  };
+
+  const renderNotificationContent = (notification) => {
+    if (notification.type.includes('TeamInvitationNotification')) {
+      return (
+        <>
+          <p>{notification.data.message}</p>
+          {(!notification.data.invitation_status || 
+            notification.data.invitation_status === 'pending') && (
+            <div className={styles.notificationActions}>
+              <button
+                onClick={() => handleInvitationResponse(notification, true)}
+                className={styles.acceptButton}
+                disabled={isProcessing(notification.id)}
+              >
+                {isProcessing(notification.id) ? 'Processing...' : 'Accept'}
+              </button>
+              <button
+                onClick={() => handleInvitationResponse(notification, false)}
+                className={styles.declineButton}
+                disabled={isProcessing(notification.id)}
+              >
+                {isProcessing(notification.id) ? 'Processing...' : 'Decline'}
+              </button>
+            </div>
+          )}
+        </>
+      );
+    } else if (notification.type.includes('TaskCommentNotification')) {
+      return (
+        <>
+          <p>{notification.data.message}</p>
+          <div className={styles.commentInfo}>
+            <small>Task: {notification.data.task_title}</small>
+            <button
+              onClick={() => handleViewTask(notification.data.project_id, notification.data.task_id)}
+              className={styles.viewButton}
+            >
+              View Task
+            </button>
+          </div>
+        </>
+      );
+    } else if (notification.type.includes('TaskFileUploadNotification') || 
+               notification.data?.type === 'task_file_upload') {
+      return (
+        <>
+          <p>{notification.data.message}</p>
+          <div className={styles.commentInfo}>
+            <small>Task: {notification.data.task_title}</small>
+            <button
+              onClick={() => handleViewTask(notification.data.project_id, notification.data.task_id)}
+              className={styles.viewButton}
+            >
+              View Task
+            </button>
+          </div>
+        </>
+      );
+    }
+    return <p>{notification.data.message}</p>;
   };
 
   // Determine if a notification is currently being processed
@@ -103,38 +181,28 @@ const Header = ({ user }) => {
           
           {showNotifications && (
             <div className={styles.notificationDropdown}>
-              {error && <div className={styles.error}>{error}</div>}
-              {loading && <div className={styles.loading}>Loading...</div>}
-              {!loading && notifications.length === 0 ? (
-                <div className={styles.noNotifications}>
-                  No new notifications
-                </div>
-              ) : (
-                notifications.map(notification => (
-                  <div key={notification.id} className={styles.notificationItem}>
-                    <p>{notification.data.message}</p>
-                    {notification.type.includes('TeamInvitationNotification') &&
-                     (!notification.data.invitation_status || notification.data.invitation_status === 'pending') && (
-                      <div className={styles.notificationActions}>
-                        <button
-                          onClick={() => handleInvitationResponse(notification, true)}
-                          className={styles.acceptButton}
-                          disabled={isProcessing(notification.id)}
-                        >
-                          {isProcessing(notification.id) ? 'Processing...' : 'Accept'}
-                        </button>
-                        <button
-                          onClick={() => handleInvitationResponse(notification, false)}
-                          className={styles.declineButton}
-                          disabled={isProcessing(notification.id)}
-                        >
-                          {isProcessing(notification.id) ? 'Processing...' : 'Decline'}
-                        </button>
-                      </div>
-                    )}
+              <div className={styles.notificationHeader}>
+                <h3>Notifications</h3>
+              </div>
+              <div className={styles.notificationContent}>
+                {error && <div className={styles.error}>{error}</div>}
+                {loading ? (
+                  <div className={styles.loading}>Loading...</div>
+                ) : notifications.length === 0 ? (
+                  <div className={styles.noNotifications}>
+                    No New Notifications
                   </div>
-                ))
-              )}
+                ) : (
+                  notifications.map(notification => (
+                    <div key={notification.id} className={styles.notificationItem}>
+                      {renderNotificationContent(notification)}
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className={styles.seeAll} onClick={handleSeeAllNotifications}>
+                See all notifications
+              </div>
             </div>
           )}
         </div>
