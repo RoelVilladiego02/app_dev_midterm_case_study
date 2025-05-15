@@ -25,6 +25,7 @@ import EditTaskModal from './EditTaskModal';
 import AssignedUsersList from './AssignedUsersList';
 import TaskComments from './TaskComments';
 import TaskFiles from './TaskFiles';
+import ActivityFeed from './ActivityFeed';
 
 const ProjectView = () => {
   const [project, setProject] = useState(null);
@@ -332,50 +333,52 @@ const ProjectView = () => {
           </button>
         </div>
       )}
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <div>
-            <h1>{project.title}</h1>
-            <p className={styles.description}>{project.description}</p>
-            <div className={styles.projectMeta}>
-              <p className={`${styles.status} ${styles[project.status]}`}>
-                Status: {project.status.replace('_', ' ')}
-              </p>
-              {project.deadline && (
-                <p className={styles.deadline}>
-                  Deadline: {new Date(project.deadline).toLocaleDateString()}
+      
+      <div className={styles.mainLayout}>
+        <div className={styles.mainContent}>
+          <div className={styles.header}>
+            <div>
+              <h1>{project.title}</h1>
+              <p className={styles.description}>{project.description}</p>
+              <div className={styles.projectMeta}>
+                <p className={`${styles.status} ${styles[project.status]}`}>
+                  Status: {project.status.replace('_', ' ')}
                 </p>
+                {project.deadline && (
+                  <p className={styles.deadline}>
+                    Deadline: {new Date(project.deadline).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+              <p className={styles.projectRole}>
+                Your role: {isOwner ? 'Project Owner' : 'Team Member'}
+              </p>
+            </div>
+            <div className={styles.actions}>
+              {isOwner && (
+                <button 
+                  onClick={() => setShowEditModal(true)} 
+                  className={styles.editButton}
+                >
+                  Edit Project
+                </button>
               )}
             </div>
-            <p className={styles.projectRole}>
-              Your role: {isOwner ? 'Project Owner' : 'Team Member'}
-            </p>
           </div>
-          <div className={styles.actions}>
-            {isOwner && (
-              <button 
-                onClick={() => setShowEditModal(true)} 
-                className={styles.editButton}
-              >
-                Edit Project
-              </button>
-            )}
-          </div>
-        </div>
 
-        <TaskProgress tasks={tasks} />
+          <TaskProgress tasks={tasks} />
 
-        {/* Only show budget to owner */}
-        {isOwner && (
-          <BudgetDashboard 
-            projectId={projectId}
-            budget={budget}
-            onUpdate={handleBudgetUpdate}
-            isOwner={isOwner}
-          />
-        )}
+          {/* Only show budget to owner */}
+          {isOwner && (
+            <BudgetDashboard 
+              projectId={projectId}
+              budget={budget}
+              onUpdate={handleBudgetUpdate}
+              isOwner={isOwner}
+            />
+          )}
 
-         {/* Team Members Section */}
+          {/* Team Members Section */}
           <div className={styles.teamSection}>
             <div className={styles.sectionHeader}>
               <h2>Team Members</h2>
@@ -439,160 +442,164 @@ const ProjectView = () => {
             </div>
           </div>
 
-        {/* Tasks Section - team members can view but not modify */}
-        <div className={styles.tasksSection}>
-          <div className={styles.sectionHeader}>
-            <h2>Tasks</h2>
-            {isOwner && (
-              <button onClick={handleAddTask} className={styles.addButton}>
-                Add Task
-              </button>
+          {/* Tasks Section - team members can view but not modify */}
+          <div className={styles.tasksSection}>
+            <div className={styles.sectionHeader}>
+              <h2>Tasks</h2>
+              {isOwner && (
+                <button onClick={handleAddTask} className={styles.addButton}>
+                  Add Task
+                </button>
+              )}
+            </div>
+            
+            {tasks.length > 0 ? (
+              <div className={styles.tasksList}>
+                {tasks.map(task => (
+                  <div 
+                    key={task.id} 
+                    className={`${styles.taskItem} ${canAccessTask(task) ? styles.accessible : styles.restricted}`}
+                  >
+                    <div 
+                      className={`${styles.taskContent} ${!canAccessTask(task) ? styles.disabled : ''}`} 
+                      onClick={() => handleTaskClick(task.id)}
+                    >
+                      <h3>{task.title}</h3>
+                      <p>{task.description}</p>
+                      <div className={styles.taskMeta}>
+                        <span className={`${styles.status} ${styles[task.status]}`}>
+                          {task.status.replace('_', ' ')}
+                        </span>
+                        <span className={styles.priority}>Priority: {task.priority}</span>
+                        {task.due_date && (
+                          <span className={styles.dueDate}>
+                            Due Date: {new Date(task.due_date).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span className={styles.assignedUser}>
+                          <AssignedUsersList 
+                            projectId={projectId} 
+                            taskId={task.id} 
+                            assignedUser={task.assigned_user} 
+                          />
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {expandedTaskId === task.id && canAccessTask(task) && (
+                      <div className={styles.expandedContent}>
+                        <TaskComments 
+                          taskId={task.id} 
+                          assignedUser={task.assigned_user}
+                          currentUser={user}
+                          isProjectOwner={isOwner}
+                        />
+                        <TaskFiles taskId={task.id} />
+                      </div>
+                    )}
+                    
+                    {isOwner && (
+                      <div className={styles.taskActions}>
+                        <button 
+                          onClick={() => handleShowAssignModal(task.id)}
+                          className={styles.assignButton}
+                        >
+                          {task.assigned_user ? 'Reassign' : 'Assign User'}
+                        </button>
+                        <button 
+                          onClick={() => handleEditTask(task)}
+                          className={styles.editTaskButton}
+                        >
+                          Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteTask(task.id)}
+                          className={styles.deleteButton}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className={styles.emptyState}>No tasks yet.</p>
+            )}
+
+            {/* Add CreateTaskModal */}
+            {showCreateTaskModal && (
+              <CreateTaskModal
+                projectId={projectId}
+                teamMembers={teamMembers}
+                onClose={() => setShowCreateTaskModal(false)}
+                onTaskCreated={handleTaskCreated}
+                initialData={{
+                  title: '',
+                  description: '',
+                  status: 'todo',
+                  priority: 'medium',
+                  due_date: '',
+                  assignee: ''
+                }}
+              />
             )}
           </div>
-          
-          {tasks.length > 0 ? (
-            <div className={styles.tasksList}>
-              {tasks.map(task => (
-                <div 
-                  key={task.id} 
-                  className={`${styles.taskItem} ${canAccessTask(task) ? styles.accessible : styles.restricted}`}
-                >
-                  <div 
-                    className={`${styles.taskContent} ${!canAccessTask(task) ? styles.disabled : ''}`} 
-                    onClick={() => handleTaskClick(task.id)}
-                  >
-                    <h3>{task.title}</h3>
-                    <p>{task.description}</p>
-                    <div className={styles.taskMeta}>
-                      <span className={`${styles.status} ${styles[task.status]}`}>
-                        {task.status.replace('_', ' ')}
-                      </span>
-                      <span className={styles.priority}>Priority: {task.priority}</span>
-                      {task.due_date && (
-                        <span className={styles.dueDate}>
-                          Due Date: {new Date(task.due_date).toLocaleDateString()}
-                        </span>
-                      )}
-                      <span className={styles.assignedUser}>
-                        <AssignedUsersList 
-                          projectId={projectId} 
-                          taskId={task.id} 
-                          assignedUser={task.assigned_user} 
-                        />
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {expandedTaskId === task.id && canAccessTask(task) && (
-                    <div className={styles.expandedContent}>
-                      <TaskComments 
-                        taskId={task.id} 
-                        assignedUser={task.assigned_user}
-                        currentUser={user}
-                        isProjectOwner={isOwner}
-                      />
-                      <TaskFiles taskId={task.id} />
-                    </div>
-                  )}
-                  
-                  {isOwner && (
-                    <div className={styles.taskActions}>
-                      <button 
-                        onClick={() => handleShowAssignModal(task.id)}
-                        className={styles.assignButton}
-                      >
-                        {task.assigned_user ? 'Reassign' : 'Assign User'}
-                      </button>
-                      <button 
-                        onClick={() => handleEditTask(task)}
-                        className={styles.editTaskButton}
-                      >
-                        Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteTask(task.id)}
-                        className={styles.deleteButton}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className={styles.emptyState}>No tasks yet.</p>
+
+          {/* Modals - only visible to owner */}
+          {isOwner && showAssignModal && (
+            <AssignUserModal
+              projectId={projectId}
+              taskId={selectedTaskId}
+              onClose={handleAssignmentUpdate}
+            />
           )}
 
-          {/* Add CreateTaskModal */}
-          {showCreateTaskModal && (
-            <CreateTaskModal
+          {isOwner && showTeamModal && (
+            <TeamMemberModal
               projectId={projectId}
-              teamMembers={teamMembers}
-              onClose={() => setShowCreateTaskModal(false)}
-              onTaskCreated={handleTaskCreated}
-              initialData={{
-                title: '',
-                description: '',
-                status: 'todo',
-                priority: 'medium',
-                due_date: '',
-                assignee: ''
+              currentTeamMembers={teamMembers}
+              onClose={() => {
+                setShowTeamModal(false);
+                // Also refresh team members when modal closes
+                setRefreshTimestamp(Date.now());
               }}
+              onTeamUpdate={async () => {
+                const updatedTeam = await fetchTeamMembers(projectId);
+                setTeamMembers(updatedTeam);
+              }}
+            />
+          )}
+
+          {/* Add the EditProjectModal */}
+          {showEditModal && (
+            <EditProjectModal
+              project={project}
+              onClose={() => setShowEditModal(false)}
+              onProjectUpdated={handleProjectUpdate}
+            />
+          )}
+
+          {/* Add the EditTaskModal */}
+          {showEditTaskModal && selectedTask && (
+            <EditTaskModal
+              projectId={projectId}
+              taskId={selectedTask.id}
+              task={selectedTask}
+              teamMembers={teamMembers}
+              onClose={() => {
+                setShowEditTaskModal(false);
+                setSelectedTask(null);
+              }}
+              onTaskUpdated={handleTaskUpdated}
             />
           )}
         </div>
 
-        {/* Modals - only visible to owner */}
-        {isOwner && showAssignModal && (
-          <AssignUserModal
-            projectId={projectId}
-            taskId={selectedTaskId}
-            onClose={handleAssignmentUpdate}
-          />
-        )}
-
-        {isOwner && showTeamModal && (
-          <TeamMemberModal
-            projectId={projectId}
-            currentTeamMembers={teamMembers}
-            onClose={() => {
-              setShowTeamModal(false);
-              // Also refresh team members when modal closes
-              setRefreshTimestamp(Date.now());
-            }}
-            onTeamUpdate={async () => {
-              const updatedTeam = await fetchTeamMembers(projectId);
-              setTeamMembers(updatedTeam);
-            }}
-          />
-        )}
-
-        {/* Add the EditProjectModal */}
-        {showEditModal && (
-          <EditProjectModal
-            project={project}
-            onClose={() => setShowEditModal(false)}
-            onProjectUpdated={handleProjectUpdate}
-          />
-        )}
-
-        {/* Add the EditTaskModal */}
-        {showEditTaskModal && selectedTask && (
-          <EditTaskModal
-            projectId={projectId}
-            taskId={selectedTask.id}
-            task={selectedTask}
-            teamMembers={teamMembers}
-            onClose={() => {
-              setShowEditTaskModal(false);
-              setSelectedTask(null);
-            }}
-            onTaskUpdated={handleTaskUpdated}
-          />
-        )}
+        <div className={styles.sidePanel}>
+          <ActivityFeed taskId={selectedTaskId} projectId={projectId} />
+        </div>
       </div>
-
     </div>
   );
 };

@@ -128,6 +128,45 @@ body {
   background-color: var(--color-background);
 }
 
+/* New styles for ProjectView layout */
+.mainLayout {
+  display: flex;
+  gap: 2rem;
+  margin: 1rem;
+  position: relative;
+}
+
+.mainContent {
+  flex: 1;
+  min-width: 0; /* Prevent flex item from overflowing */
+}
+
+.sidePanel {
+  width: 320px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 1rem;
+  align-self: flex-start;
+}
+
+@media (max-width: 1200px) {
+  .mainLayout {
+    flex-direction: column;
+  }
+
+  .sidePanel {
+    width: 100%;
+    position: static;
+    max-height: 500px;
+  }
+}
+
 /* Typography styles */
 h1, h2, h3, h4, h5, h6 {
   margin-bottom: var(--space-sm);
