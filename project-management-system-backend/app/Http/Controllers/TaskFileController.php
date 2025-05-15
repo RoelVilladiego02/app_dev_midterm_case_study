@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\TaskFile;
+use App\Events\TaskActivity;
 use App\Notifications\TaskFileUploadNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -58,6 +59,14 @@ class TaskFileController extends Controller
                 'mime_type' => $file->getMimeType(),
                 'file_size' => $file->getSize()
             ]);
+
+            // Log the activity using the trait
+            $task->logActivity(
+                'file_uploaded',
+                'Uploaded file: ' . $file->getClientOriginalName(),
+                ['file_id' => $taskFile->id],
+                $task->id
+            );
 
             // Send notifications
             if ($currentUser->id !== $project->user_id) {

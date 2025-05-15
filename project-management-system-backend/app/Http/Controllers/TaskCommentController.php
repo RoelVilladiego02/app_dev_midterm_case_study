@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\TaskComment;
+use App\Events\TaskActivity;
 use App\Notifications\TaskCommentNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -48,6 +49,14 @@ class TaskCommentController extends Controller
                 'user_id' => auth()->id(),
                 'comment_text' => $validated['comment_text']
             ]);
+
+            // Log the activity using the trait
+            $task->logActivity(
+                'comment_added',
+                'Added a new comment',
+                ['comment_id' => $comment->id],
+                $task->id
+            );
 
             $comment->load(['task.project', 'user']);
 

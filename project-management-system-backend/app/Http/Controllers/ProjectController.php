@@ -37,6 +37,13 @@ class ProjectController extends Controller
             'actual_expenditure' => $validated['actual_expenditure'] ?? 0,
         ]);
 
+        // Log project creation
+        $project->logActivity(
+            'project_created',
+            'Created new project: ' . $project->title,
+            $validated
+        );
+
         return response()->json($project, 201);
     }
 
@@ -110,6 +117,7 @@ class ProjectController extends Controller
     public function update(Request $request, $id)
     {
         $project = Project::where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $oldStatus = $project->status;
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -122,6 +130,23 @@ class ProjectController extends Controller
         ]);
 
         $project->update($validated);
+
+        // Log status change if it changed
+        if ($oldStatus !== $validated['status']) {
+            $project->logActivity(
+                'project_status_changed',
+                "Changed project status from {$oldStatus} to {$validated['status']}",
+                ['old_status' => $oldStatus, 'new_status' => $validated['status']]
+            );
+        }
+
+        // Log project update
+        $project->logActivity(
+            'project_updated',
+            'Updated project details',
+            $validated
+        );
+
         return response()->json($project);
     }
 

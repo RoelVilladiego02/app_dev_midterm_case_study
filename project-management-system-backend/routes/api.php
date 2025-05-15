@@ -14,6 +14,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskFileController;
+use App\Http\Controllers\ActivityLogController;
 
 /*
 |--------------------------------------------------------------------------
@@ -98,6 +99,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('notifications/{id}', [NotificationController::class, 'markAsHandled']);
     Route::delete('notifications/{id}', [NotificationController::class, 'destroy']);
     Route::post('notifications/cleanup', [NotificationController::class, 'cleanupStaleNotifications']);
+
+    // Activity feed routes
+    Route::get('/activity-feed', [ActivityLogController::class, 'index']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

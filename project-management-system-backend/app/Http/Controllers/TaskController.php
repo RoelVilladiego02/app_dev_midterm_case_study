@@ -60,6 +60,14 @@ class TaskController extends Controller
 
             $task = $project->tasks()->create($taskData);
 
+            // Log activity using the trait
+            $task->logActivity(
+                'task_created',
+                'Created new task: ' . $task->title,
+                [],
+                $task->id
+            );
+
             Log::info('Task created successfully', [
                 'task_id' => $task->id,
                 'project_id' => $projectId
@@ -110,6 +118,7 @@ class TaskController extends Controller
     {
         try {
             $task = Task::where('project_id', $projectId)->findOrFail($taskId);
+            $oldStatus = $task->status;
 
             $validated = $request->validate([
                 'title' => 'required|string|max:255',
@@ -120,6 +129,24 @@ class TaskController extends Controller
             ]);
 
             $task->update($validated);
+
+            // Log status change if it changed
+            if ($oldStatus !== $validated['status']) {
+                $task->logActivity(
+                    'status_changed',
+                    "Changed status from {$oldStatus} to {$validated['status']}",
+                    ['old_status' => $oldStatus, 'new_status' => $validated['status']],
+                    $task->id
+                );
+            }
+
+            // Log task update
+            $task->logActivity(
+                'task_updated',
+                'Updated task details',
+                $validated,
+                $task->id
+            );
 
             return response()->json([
                 'message' => 'Task updated successfully',
@@ -139,6 +166,15 @@ class TaskController extends Controller
     public function destroy($projectId, $taskId)
     {
         $task = Task::where('id', $taskId)->where('project_id', $projectId)->firstOrFail();
+        
+        // Log deletion before deleting
+        $task->logActivity(
+            'task_deleted',
+            'Task deleted: ' . $task->title,
+            [],
+            $task->id
+        );
+        
         $task->delete();
         return response()->json(['message' => 'Task deleted successfully']);
     }
@@ -157,13 +193,33 @@ class TaskController extends Controller
         }
 
         $task->assignedUsers()->syncWithoutDetaching([$user->id]);
+
+        // Log user assignment
+        $task->logActivity(
+            'user_assigned',
+            "Assigned user {$user->name} to task",
+            ['assigned_user_id' => $user->id],
+            $task->id
+        );
+
         return response()->json(['message' => 'User assigned successfully']);
     }
 
     public function unassignUser($projectId, $taskId, $userId)
     {
         $task = Task::where('project_id', $projectId)->findOrFail($taskId);
+        $user = User::findOrFail($userId);
+        
         $task->assignedUsers()->detach($userId);
+
+        // Log user unassignment
+        $task->logActivity(
+            'user_unassigned',
+            "Unassigned user {$user->name} from task",
+            ['unassigned_user_id' => $userId],
+            $task->id
+        );
+
         return response()->json(['message' => 'User unassigned successfully']);
     }
 
