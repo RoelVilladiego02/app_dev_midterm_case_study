@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('status')->default('todo'); // Should be string
             $table->string('priority')->default('medium'); // Should be string
             $table->date('due_date')->nullable();
+            $table->integer('completion_percentage')->default(0);
             $table->foreignId('project_id')->constrained();
             $table->timestamps();
         });
