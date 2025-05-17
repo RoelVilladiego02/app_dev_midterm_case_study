@@ -7,7 +7,8 @@ const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false })
     description: initialData.description || '',
     priority: initialData.priority || 'medium',
     due_date: initialData.due_date || '',
-    status: initialData.status || 'todo'  // Will only be used in edit mode
+    status: initialData.status || 'todo',
+    completion_percentage: initialData.completion_percentage || 0  // Make sure this gets initialized
   });
   const [errors, setErrors] = useState({});
 
@@ -16,6 +17,23 @@ const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false })
     setFormData(prev => ({
       ...prev,
       [name]: value
+    }));
+  };
+
+  const handleStatusChange = (e) => {
+    const newStatus = e.target.value;
+    let newPercentage = formData.completion_percentage;
+
+    if (newStatus === 'completed') {
+      newPercentage = 100;
+    } else if (newStatus === 'todo') {
+      newPercentage = 0;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      status: newStatus,
+      completion_percentage: newPercentage
     }));
   };
 
@@ -60,7 +78,7 @@ const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false })
         status: formData.status || 'todo',
         priority: formData.priority || 'medium',
         due_date: formData.due_date || null,
-        completion_percentage: 0  // Add default completion percentage
+        completion_percentage: formData.completion_percentage || 0
       };
 
       console.log('Submitting task:', submissionData);
@@ -104,20 +122,42 @@ const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false })
 
       {/* Only show status field in edit mode */}
       {isEditMode && (
-        <div className={styles.formGroup}>
-          <label htmlFor="status">Status *</label>
-          <select
-            id="status"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            required
-          >
-            <option value="todo">To Do</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
+        <>
+          <div className={styles.formGroup}>
+            <label htmlFor="status">Status *</label>
+            <select
+              id="status"
+              name="status"
+              value={formData.status}
+              onChange={handleStatusChange}
+              required
+            >
+              <option value="todo">To Do</option>
+              <option value="in_progress">In Progress</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+
+          {isEditMode && formData.status === 'in_progress' && (
+            <div className={styles.formGroup}>
+              <label htmlFor="completion_percentage">Progress (%)</label>
+              <input
+                type="number"
+                id="completion_percentage"
+                name="completion_percentage"
+                value={formData.completion_percentage}
+                onChange={(e) => setFormData(prev => ({
+                  ...prev,
+                  completion_percentage: Math.min(99, Math.max(0, parseInt(e.target.value) || 0))
+                }))}
+                min="0"
+                max="99"
+                required
+              />
+              <small className={styles.hint}>Enter a value between 0 and 99</small>
+            </div>
+          )}
+        </>
       )}
 
       <div className={styles.formGroup}>

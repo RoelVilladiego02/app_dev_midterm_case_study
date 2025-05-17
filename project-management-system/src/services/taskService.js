@@ -16,27 +16,44 @@ export const fetchTasks = async (projectId) => {
   try {
     console.log(`Fetching tasks for project ${projectId}`);
     const response = await axios.get(`${API_URL}/api/projects/${projectId}/tasks`);
-    console.log('Tasks response:', response.data);
     
-    // Ensure we get assigned users for each task
+    // Debug log raw response
+    console.log('Raw tasks from server:', response.data);
+    
     const tasksWithUsers = await Promise.all(response.data.map(async (task) => {
       try {
         const assignedUsers = await fetchAssignedUsers(projectId, task.id);
-        return {
+        
+        // Keep the exact completion_percentage from server
+        const taskData = {
           ...task,
           assigned_user: assignedUsers.length > 0 ? assignedUsers[0] : null,
-          assignedUsers: assignedUsers // Store full array of assigned users
+          assignedUsers: assignedUsers,
+          // Preserve the exact completion_percentage
+          completion_percentage: task.completion_percentage
         };
+
+        // Debug log for each task
+        console.log('Task completion details:', {
+          taskId: task.id,
+          title: task.title,
+          status: task.status,
+          originalPercentage: task.completion_percentage,
+          preservedPercentage: taskData.completion_percentage
+        });
+
+        return taskData;
       } catch (error) {
-        console.error(`Error fetching assigned users for task ${task.id}:`, error);
+        console.error(`Error processing task ${task.id}:`, error);
         return {
           ...task,
           assigned_user: null,
-          assignedUsers: []
+          assignedUsers: [],
+          completion_percentage: task.completion_percentage
         };
       }
     }));
-    
+
     return tasksWithUsers;
   } catch (error) {
     console.error('Error fetching tasks:', error);
@@ -54,7 +71,9 @@ export const createTask = async (projectId, taskData) => {
       description: taskData.description?.trim() || '',
       priority: taskData.priority || 'medium',
       due_date: taskData.due_date || null,
-      status: 'todo'  // Always set initial status as todo
+      status: taskData.status || 'todo',  // Allow custom status from UI
+      completion_percentage: taskData.completion_percentage !== undefined ? 
+        taskData.completion_percentage : 0  // Allow explicit setting of completion percentage
     };
 
     const response = await axios.post(
@@ -84,31 +103,23 @@ export const createTask = async (projectId, taskData) => {
 export const updateTask = async (projectId, taskId, taskData) => {
   setupAuthHeader();
   try {
+    // Always preserve the exact completion_percentage
     const formattedTaskData = {
-      title: taskData.title,
-      description: taskData.description || '',
-      status: taskData.status || 'todo',
+      ...taskData,
+      status: taskData.status,
       priority: taskData.priority || 'medium',
-      due_date: taskData.due_date && taskData.due_date !== '' ? taskData.due_date : null
+      due_date: taskData.due_date && taskData.due_date !== '' ? taskData.due_date : null,
+      // Ensure completion_percentage is sent exactly as provided
+      completion_percentage: taskData.completion_percentage
     };
 
+    console.log('Updating task with data:', formattedTaskData);
     const response = await axios.put(
       `${API_URL}/api/projects/${projectId}/tasks/${taskId}`,
       formattedTaskData
     );
 
-    if (taskData.assignee) {
-      const currentAssignees = await fetchAssignedUsers(projectId, taskId);
-      if (currentAssignees.length > 0) {
-        await Promise.all(
-          currentAssignees.map(user =>
-            unassignUserFromTask(projectId, taskId, user.id)
-          )
-        );
-      }
-      await assignUserToTask(projectId, taskId, taskData.assignee);
-    }
-
+    console.log('Task update response:', response.data);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Failed to update task');

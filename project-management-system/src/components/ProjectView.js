@@ -51,6 +51,25 @@ const ProjectView = () => {
   const navigate = useNavigate();
   const { projectId } = useParams();
 
+  const processTaskData = (tasksData) => {
+    if (!Array.isArray(tasksData)) return [];
+    
+    return tasksData.map(task => {
+      // Log the task data for debugging
+      console.log('Processing task:', {
+        id: task.id,
+        title: task.title,
+        status: task.status,
+        completion_percentage: task.completion_percentage
+      });
+      
+      // Return task data without modifying completion_percentage
+      return {
+        ...task
+      };
+    });
+  };
+
   useEffect(() => {
     const loadUserAndData = async () => {
       try {
@@ -63,10 +82,10 @@ const ProjectView = () => {
         }
         const parsedUser = JSON.parse(userData);
         setUser(parsedUser);
-  
+
         const projectData = await fetchSingleProject(projectId);
         console.log('Received project data:', projectData);
-  
+
         if (!projectData.isOwner && !projectData.teamMembers?.some(m => m.id === parsedUser.id)) {
           throw new Error('You do not have access to this project');
         }
@@ -75,12 +94,21 @@ const ProjectView = () => {
         setIsOwner(projectData.isOwner);
         setTeamMembers(projectData.teamMembers || []);
         
-        if (projectData.tasks) {
-          setTasks(projectData.tasks);
+        // Process tasks data
+        let tasksData;
+        if (projectData.tasks && Array.isArray(projectData.tasks)) {
+          tasksData = projectData.tasks;
         } else {
-          const tasksData = await fetchTasks(projectId);
-          setTasks(tasksData);
+          tasksData = await fetchTasks(projectId);
         }
+        
+        // Log the raw tasks data received from API
+        console.log('Raw tasks data before processing:', tasksData);
+        
+        // Process and set tasks
+        const processedTasks = processTaskData(tasksData);
+        console.log('Processed tasks data:', processedTasks);
+        setTasks(processedTasks);
   
         setBudget({
           total_budget: projectData.total_budget || 0,
@@ -142,9 +170,15 @@ const ProjectView = () => {
   const handleTaskCreated = async () => {
     try {
       setShowCreateTaskModal(false);
+      
+      // Fetch updated tasks from API
       const updatedTasks = await fetchTasks(projectId);
-      console.log('Updated tasks after creation:', updatedTasks);
-      setTasks(updatedTasks);
+      
+      // Log the raw tasks data received from API after creation
+      console.log('Tasks data after creation:', updatedTasks);
+      
+      // Process and set tasks with proper completion percentages preserved
+      setTasks(processTaskData(updatedTasks));
       
       // Show success message
       setErrorPopup({
@@ -170,8 +204,15 @@ const ProjectView = () => {
   const handleTaskUpdated = async () => {
     try {
       setShowEditTaskModal(false);
+      
+      // Fetch updated tasks from API
       const updatedTasks = await fetchTasks(projectId);
-      setTasks(updatedTasks);
+      
+      // Log the raw tasks data received from API after update
+      console.log('Tasks data after update:', updatedTasks);
+      
+      // Process and set tasks with proper completion percentages preserved
+      setTasks(processTaskData(updatedTasks));
       setSelectedTask(null);
       
       // Show success message
@@ -250,9 +291,8 @@ const ProjectView = () => {
   const handleAssignmentUpdate = async () => {
     try {
       setShowAssignModal(false);
-      // Fetch fresh task data immediately after assignment
       const updatedTasks = await fetchTasks(projectId);
-      setTasks(updatedTasks);
+      setTasks(processTaskData(updatedTasks));
     } catch (err) {
       console.error('Error updating task assignments:', err);
       setError('Failed to update task assignments.');

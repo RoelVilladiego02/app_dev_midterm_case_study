@@ -179,70 +179,64 @@
 
 .taskBar {
   position: absolute;
-  top: 10px;
   height: 30px;
+  background: #f8f9fa;
   border-radius: 15px;
-  min-width: 30px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin: 10px 0;
   cursor: pointer;
-  z-index: 1;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
 .taskBar:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 6px rgba(0,0,0,0.15);
-  z-index: 3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
 }
 
 .progressFill {
+  position: absolute;
+  left: 0;
+  top: 0;
   height: 100%;
-  background: rgba(255,255,255,0.35);
+  background-color: #0dcaf0;
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 15px;
-  transition: width 0.5s ease-out;
 }
 
 .taskInfo {
   position: absolute;
+  right: 10px;
   top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 0.85em;
-  white-space: nowrap;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
-  opacity: 0.9;
-  transition: opacity 0.2s ease;
-  pointer-events: none;
-}
-
-.taskBar:hover .taskInfo {
-  opacity: 1;
+  transform: translateY(-50%);
+  color: #000;
+  font-size: 12px;
+  font-weight: bold;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 2px 8px;
+  border-radius: 10px;
+  z-index: 2;
 }
 
 .today {
   position: absolute;
   top: 0;
+  bottom: 0;
   width: 2px;
-  height: 100%;
-  background: #dc3545;
-  z-index: 1;
-  box-shadow: 0 0 8px rgba(220,53,69,0.5);
-  animation: pulse 2s infinite;
+  background-color: #dc3545;
+  z-index: 5;
 }
 
-@keyframes pulse {
-  0% {
-    opacity: 0.8;
-  }
-  50% {
-    opacity: 0.5;
-  }
-  100% {
-    opacity: 0.8;
-  }
+.today::after {
+  content: "Today";
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: #dc3545;
+  font-weight: bold;
+  white-space: nowrap;
 }
 
 .weekendHighlight {
@@ -303,6 +297,72 @@
 .statusInProgress { background-color: #0dcaf0; }
 .statusPending { background-color: #6c757d; }
 .statusOverdue { background-color: #dc3545; }
+.todo { background-color: #6c757d; }
+.in_progress { background-color: #0dcaf0; }
+.completed { background-color: #198754; }
+
+/* Legend section */
+.legend {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+  gap: 15px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+/* Tooltip styling */
+.taskTooltip {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #343a40;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.taskBar:hover .taskTooltip {
+  opacity: 1;
+  visibility: visible;
+  top: -45px;
+}
+
+.taskTooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #343a40 transparent transparent transparent;
+}
+
+/* Timeline grid */
+.timelineGrid {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  pointer-events: none;
+}
+
+.gridLine {
+  border-right: 1px dashed rgba(0, 0, 0, 0.1);
+  height: 100%;
+}
 
 /* Responsive adjustments */
 @media (max-width: 992px) {

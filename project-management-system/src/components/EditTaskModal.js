@@ -18,10 +18,11 @@ const EditTaskModal = ({ projectId, taskId, task, onClose, onTaskUpdated }) => {
           fetchTeamMembers(projectId)
         ]);
         
-        // Set initial data with the correct assignee field
+        // Make sure we pass the completion_percentage from the task data
         setInitialData({
           ...task,
-          assignee: assignedUsers && assignedUsers.length > 0 ? assignedUsers[0].id : ''
+          assignee: assignedUsers && assignedUsers.length > 0 ? assignedUsers[0].id : '',
+          completion_percentage: task.completion_percentage || 0
         });
         setTeamMembers(members);
       } catch (err) {
@@ -38,19 +39,23 @@ const EditTaskModal = ({ projectId, taskId, task, onClose, onTaskUpdated }) => {
     setError('');
     
     try {
+      // Preserve completion_percentage exactly as provided
       const taskData = {
         title: formData.title,
         description: formData.description || '',
-        status: formData.status || 'todo',
+        status: formData.status,
         priority: formData.priority || 'medium',
         due_date: formData.due_date && formData.due_date !== '' ? formData.due_date : null,
-        assignee: formData.assignee || null
+        assignee: formData.assignee || null,
+        completion_percentage: formData.completion_percentage
       };
 
-      // Validate required fields
-      if (!taskData.title) {
-        throw new Error('Title is required');
-      }
+      console.log('Submitting task update:', {
+        taskId,
+        originalPercentage: task.completion_percentage,
+        newPercentage: taskData.completion_percentage,
+        status: taskData.status
+      });
 
       const response = await updateTask(projectId, taskId, taskData);
       console.log('Task update response:', response);
@@ -61,19 +66,7 @@ const EditTaskModal = ({ projectId, taskId, task, onClose, onTaskUpdated }) => {
       onClose();
     } catch (err) {
       console.error('Failed to update task:', err);
-      if (err.response?.data) {
-        console.error('Full error response data:', err.response.data);
-        if (err.response.data.errors) {
-          const messages = Object.values(err.response.data.errors).flat().join(', ');
-          setError(messages);
-        } else if (err.response.data.message) {
-          setError(err.response.data.message);
-        } else {
-          setError(err.message || 'Failed to update task');
-        }
-      } else {
-        setError(err.message || 'Failed to update task');
-      }
+      setError(err.message || 'Failed to update task');
     } finally {
       setIsLoading(false);
     }
