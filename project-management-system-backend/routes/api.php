@@ -16,6 +16,7 @@ use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskFileController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\RiskController;
 
 /*
 |--------------------------------------------------------------------------
@@ -109,6 +110,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/reports/projects/{project}/budget', [ReportController::class, 'budgetUtilization']);
     Route::get('/reports/projects/{project}/tasks', [ReportController::class, 'taskAnalytics']);
     Route::get('/projects/{project}/analytics/tasks', [ReportController::class, 'taskAnalytics']);
+
+    // Risk Management Routes
+    Route::get('/projects/{project}/risks', [RiskController::class, 'index']);
+    Route::post('/projects/{project}/risks', [RiskController::class, 'store']);
+    Route::put('/projects/{project}/risks/{risk}', [RiskController::class, 'update']);
+    Route::delete('/projects/{project}/risks/{risk}', [RiskController::class, 'destroy']);
+
+    // Risk Analytics Routes
+    Route::get('/projects/{project}/risks/analytics', [RiskController::class, 'getAnalytics']);
+    Route::get('/projects/{project}/risks/trends', [RiskController::class, 'getTrends']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

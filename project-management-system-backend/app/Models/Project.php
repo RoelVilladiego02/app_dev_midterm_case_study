@@ -68,4 +68,9 @@ class Project extends Model
         $this->actual_expenditure = $this->calculateActualExpenditure();
         $this->save();
     }
+
+    public function risks()
+    {
+        return $this->hasMany(Risk::class);
+    }
 }
