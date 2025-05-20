@@ -114,10 +114,7 @@ body {
 /* Base layout styles */
 .dashboardContainer {
   min-height: 100vh;
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--color-background);
+  background-color: #f8f9fa;
 }
 
 .container {
@@ -130,15 +127,19 @@ body {
 
 /* New styles for ProjectView layout */
 .mainLayout {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 300px;
   gap: 2rem;
-  margin: 1rem;
-  position: relative;
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 .mainContent {
-  flex: 1;
-  min-width: 0; /* Prevent flex item from overflowing */
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .sidePanel {
@@ -157,13 +158,31 @@ body {
 
 @media (max-width: 1200px) {
   .mainLayout {
-    flex-direction: column;
+    grid-template-columns: 1fr;
   }
-
+  
   .sidePanel {
-    width: 100%;
     position: static;
-    max-height: 500px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mainLayout {
+    padding: 1rem;
+  }
+  
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .editButton, .reportsButton {
+    flex: 1;
   }
 }
 
@@ -193,9 +212,8 @@ p {
 }
 
 .description {
-  color: var(--color-text-secondary);
-  margin-top: var(--space-sm);
-  margin-bottom: var(--space-md);
+  color: #6c757d;
+  margin: 0.5rem 0;
 }
 
 .deadline {
@@ -218,18 +236,62 @@ p {
 
 /* Header section */
 .header {
-  margin-bottom: var(--space-xl);
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  flex-wrap: wrap;
-  gap: var(--space-md);
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.header h1 {
+  font-size: 2rem;
+  color: #212529;
+  margin: 0 0 0.5rem 0;
 }
 
 .header .actions {
   display: flex;
-  gap: var(--space-sm);
-  margin-left: auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.editButton,
+.reportsButton {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  height: 36px;
+}
+
+.editButton {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  color: #495057;
+}
+
+.reportsButton {
+  background-color: #0066cc;
+  border: none;
+  color: white;
+}
+
+.editButton:hover,
+.reportsButton:hover {
+  transform: translateY(-1px);
+}
+
+.editButton:hover {
+  background-color: #e9ecef;
+}
+
+.reportsButton:hover {
+  background-color: #0052a3;
 }
 
 /* Button styles with improved hover and active states */
@@ -346,16 +408,11 @@ p {
 
 /* Close button for popups */
 .closeButton {
-  background-color: transparent;
-  color: var(--color-gray-600);
-  font-size: var(--font-size-xl);
-  padding: var(--space-xs);
-  line-height: 1;
-}
-
-.closeButton:hover {
-  color: var(--color-gray-800);
-  background-color: var(--color-gray-100);
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  color: #495057;
 }
 
 /* Section styles */
@@ -380,350 +437,173 @@ p {
 }
 
 /* Team section - enhanced styling */
-.teamList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-lg);
-}
-
-.teamMember {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: var(--color-gray-50);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  border-left: 4px solid var(--color-blue-500);
-  transition: var(--transition-default);
-}
-
-.teamMember:hover {
-  transform: translateY(-2px);
+.teamSection {
+  background: var(--color-background-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-2xl);
   box-shadow: var(--shadow-sm);
-  background-color: var(--color-gray-100);
 }
 
-/* Active Members section */
-.activeMembers {
+.teamHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: var(--space-lg);
 }
 
-.activeMembers h3 {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-md);
-  margin-bottom: var(--space-md);
-  padding-bottom: var(--space-xs);
-  border-bottom: 1px solid var(--color-border);
+.teamHeader h2 {
+  font-size: var(--font-size-xl);
+  color: var(--color-text-primary);
+  margin: 0;
 }
 
-/* Pending Invites section - improved styling */
-.pendingInvites {
-  padding-top: var(--space-md);
+.teamGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: var(--space-md);
 }
 
-.pendingInvites h3 {
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-md);
-  margin-bottom: var(--space-md);
-  padding-bottom: var(--space-xs);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.pendingMember {
+.memberCard {
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-md);
-  background-color: var(--color-gray-50);
-  border-radius: var(--radius-md);
-  margin-bottom: var(--space-sm);
-  border-left: 4px solid var(--color-yellow-500);
   transition: var(--transition-default);
 }
 
-.pendingMember:hover {
+.memberCard:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
-  background-color: var(--color-gray-100);
+  box-shadow: var(--shadow-md);
+  background: var(--color-white);
 }
 
 .memberInfo {
   display: flex;
   align-items: center;
-  gap: var(--space-md);
+  gap: var(--space-sm);
+}
+
+.memberAvatar {
+  width: 40px;
+  height: 40px;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  display: grid;
+  place-items: center;
+  color: var(--color-white);
+  font-weight: var(--font-weight-medium);
+}
+
+.memberDetails {
+  display: flex;
+  flex-direction: column;
 }
 
 .memberName {
   font-weight: var(--font-weight-medium);
-}
-
-.pendingStatus {
-  background-color: var(--color-status-pending-bg);
-  color: var(--color-status-pending-text);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-/* Task section - enhanced styling */
-.tasksList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.taskItem {
-  margin-bottom: 1rem;
-  border: 1px solid var(--color-gray-200);
-  border-radius: 4px;
-  transition: all 0.3s ease;
-  display: flex;
-  justify-content: space-between;
-  padding: var(--space-lg);
-  background: var(--color-white);
-  box-shadow: var(--shadow-sm);
-  border-left: 4px solid transparent;
-  cursor: pointer;
-}
-
-.taskItem:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.taskItem.expanded {
-  box-shadow: var(--shadow-md);
-  transform: scale(1.01);
-}
-
-/* Different border colors for tasks based on priority */
-.taskItem[data-priority="high"] {
-  border-left-color: var(--color-red-500);
-}
-
-.taskItem[data-priority="medium"] {
-  border-left-color: var(--color-yellow-500);
-}
-
-.taskItem[data-priority="low"] {
-  border-left-color: var(--color-green-500);
-}
-
-.taskContent {
-  flex: 1;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.taskContent:hover {
-  background-color: var(--color-gray-50);
-}
-
-.expandedContent {
-  width: 100%;
-  padding: var(--space-md);
-  border-top: 1px solid var(--color-gray-200);
-  background-color: var(--color-white);
-  margin-top: var(--space-md);
-}
-
-.taskContent h3 {
-  margin-top: 0;
-  margin-bottom: var(--space-sm);
   color: var(--color-text-primary);
 }
 
-.taskContent p {
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-md);
-}
-
-.taskMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
+.memberRole {
   font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
-/* Task actions - improved column layout */
-.taskActions {
+.removeButton {
+  background: var(--color-danger);
+  color: var(--color-white);
+  border: none;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: var(--transition-default);
+}
+
+.removeButton:hover {
+  background: var(--color-danger-hover);
+  transform: translateY(-1px);
+}
+
+.pendingSection {
+  margin-top: var(--space-xl);
+  background: var(--color-background-card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+.pendingSection h3 {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pendingCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md);
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+  transition: var(--transition-default);
+}
+
+.pendingCard:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.pendingInfo {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  margin-left: var(--space-md);
-  min-width: 110px;
+  gap: 0.25rem;
 }
 
-/* Status badges - improved with consistent styling */
-.badge,
-.status,
-.pending_review,
-.in_progress,
-.completed {
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-full);
+.pendingName {
   font-weight: var(--font-weight-medium);
-  font-size: var(--font-size-xs);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-md);
 }
 
-/* Status badge colors */
-.badge--pending,
-.pending_review {
-  background-color: var(--color-status-pending-bg);
+.pendingStatus {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: var(--color-status-pending-bg);
   color: var(--color-status-pending-text);
-}
-
-.badge--in-progress,
-.in_progress {
-  background-color: var(--color-status-progress-bg);
-  color: var(--color-status-progress-text);
-}
-
-.badge--completed,
-.completed {
-  background-color: var(--color-status-completed-bg);
-  color: var(--color-status-completed-text);
-}
-
-.badge--assigned {
-  background-color: var(--color-status-assigned-bg);
-  color: var(--color-status-assigned-text);
-}
-
-/* Priority, due date, and assigned user styles */
-.priority, 
-.dueDate, 
-.assignedUser,
-.taskCost {
-  display: inline-flex;
-  align-items: center;
-  color: var(--color-text-tertiary);
-}
-
-/* Accessible and restricted tasks */
-.accessible {
-  border-left: 4px solid var(--color-primary);
-}
-
-.restricted {
-  border-left: 4px solid var(--color-gray-300);
-}
-
-.accessible .taskContent:hover {
-  background-color: var(--color-gray-50);
-  cursor: pointer;
-}
-
-.restricted .taskContent:hover {
-  background-color: transparent;
-  cursor: not-allowed;
-}
-
-.disabled {
-  cursor: not-allowed !important;
-  opacity: 0.7;
-}
-
-/* Empty states */
-.emptyState,
-.loadingState,
-.errorState,
-.notFound {
-  text-align: center;
-  padding: var(--space-xl);
-  background-color: var(--color-gray-50);
-  border-radius: var(--radius-lg);
-  color: var(--color-text-tertiary);
-  border: 1px dashed var(--color-gray-300);
-  margin: var(--space-md) 0;
-}
-
-.loadingState,
-.errorState {
-  font-weight: var(--font-weight-medium);
-}
-
-.errorState {
-  color: var(--color-red-500);
-  background-color: var(--color-red-100);
-}
-
-/* Notification popup */
-.errorPopup {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: var(--color-red-100);
-  color: var(--color-red-600);
-  padding: var(--space-md);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  animation: slideIn 0.3s ease-out;
-  max-width: 400px;
-  border-left: 4px solid var(--color-red-500);
-}
-
-/* Project meta information and status */
-.projectMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin: var(--space-sm) 0;
-}
-
-.status {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--space-xs) var(--space-sm);
   border-radius: var(--radius-full);
-  font-weight: var(--font-weight-medium);
   font-size: var(--font-size-sm);
-  text-transform: capitalize;
+  font-weight: var(--font-weight-medium);
 }
 
-.status.pending {
-  background-color: var(--color-status-pending-bg);
-  color: var(--color-status-pending-text);
+.removeButton, .cancelButton {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-default);
+  background: var(--color-danger);
+  color: var(--color-white);
 }
 
-.status.in_progress {
-  background-color: var(--color-status-progress-bg);
-  color: var(--color-status-progress-text);
+.removeButton:hover, .cancelButton:hover {
+  background: var(--color-danger-hover);
+  transform: translateY(-1px);
 }
 
-.status.completed {
-  background-color: var(--color-status-completed-bg);
-  color: var(--color-status-completed-text);
-}
-
-/* Animations */
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.teamList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 /* Responsive styles */
@@ -824,4 +704,285 @@ button:focus-visible,
 a:focus-visible {
   outline: 2px solid var(--color-blue-500);
   outline-offset: 2px;
+}
+
+/* Team Member View Specific Styles */
+.teamMemberView {
+  background-color: var(--color-background-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.projectHeader {
+  border-bottom: 1px solid var(--color-border);
+  padding-bottom: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.projectTitle {
+  font-size: var(--font-size-2xl);
+  color: var(--color-text-primary);
+  margin-bottom: var(--space-sm);
+}
+
+.projectMetrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-lg);
+  margin: var(--space-lg) 0;
+  padding: var(--space-md);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-lg);
+}
+
+.metric {
+  text-align: center;
+  padding: var(--space-md);
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+
+.metricLabel {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-xs);
+}
+
+.metricValue {
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.taskListTeamMember {
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+}
+
+.taskCardTeamMember {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  transition: var(--transition-default);
+}
+
+.taskCardTeamMember:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.taskHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-md);
+}
+
+.taskTitle {
+  font-size: var(--font-size-lg);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.taskStatus {
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.taskStatus.todo { 
+  background: var(--color-status-pending-bg);
+  color: var(--color-status-pending-text);
+}
+
+.taskStatus.in_progress {
+  background: var(--color-status-progress-bg);
+  color: var(--color-status-progress-text);
+}
+
+.taskStatus.completed {
+  background: var(--color-status-completed-bg);
+  color: var(--color-status-completed-text);
+}
+
+.taskDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.taskDetail {
+  display: flex;
+  flex-direction: column;
+}
+
+.detailLabel {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-xs);
+}
+
+.detailValue {
+  color: var(--color-text-primary);
+}
+
+.tasksSection {
+  background: var(--color-background-card);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-2xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.tasksList {
+  display: grid;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.taskItem {
+  background: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: var(--transition-default);
+}
+
+.taskItem:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.taskContent {
+  padding: var(--space-lg);
+  cursor: pointer;
+}
+
+.taskContent h3 {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-lg);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.taskContent p {
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-md) 0;
+}
+
+.taskMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+  margin-top: var(--space-md);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.status.todo {
+  background: var(--color-status-pending-bg);
+  color: var(--color-status-pending-text);
+}
+
+.status.in_progress {
+  background: var(--color-status-progress-bg);
+  color: var(--color-status-progress-text);
+}
+
+.status.completed {
+  background: var(--color-status-completed-bg);
+  color: var(--color-status-completed-text);
+}
+
+.priority {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.dueDate {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.taskActions {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: var(--color-gray-50);
+  border-top: 1px solid var(--color-border);
+}
+
+.taskActions button {
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  transition: var(--transition-default);
+  border: 1px solid transparent;
+}
+
+.assignButton {
+  background: var(--color-primary);
+  color: var(--color-white);
+}
+
+.assignButton:hover {
+  background: var(--color-primary-hover);
+}
+
+.editTaskButton {
+  background: var(--color-white);
+  border-color: var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.editTaskButton:hover {
+  background: var(--color-gray-100);
+}
+
+.deleteButton {
+  background: var(--color-danger);
+  color: var(--color-white);
+}
+
+.deleteButton:hover {
+  background: var(--color-danger-hover);
+}
+
+.expandedContent {
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-lg);
+  background: var(--color-white);
+}
+
+.accessible {
+  cursor: pointer;
+}
+
+.restricted {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.disabled {
+  pointer-events: none;
 }

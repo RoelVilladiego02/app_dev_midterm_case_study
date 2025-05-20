@@ -27,7 +27,12 @@ export const fetchProjects = async () => {
   try {
     console.log('Fetching projects with auth token:', localStorage.getItem('auth_token'));
     
-    const response = await axios.get(`${API_URL}/api/projects/getAllProjects`);
+    const response = await axios.get(`${API_URL}/api/projects/getAllProjects`, {
+      headers: {
+        'Retry-After': '5',
+        'X-RateLimit-Remaining': true
+      }
+    });
     
     if (!response || !response.data) {
       console.log('No projects found, returning empty array');
@@ -55,9 +60,12 @@ export const fetchProjects = async () => {
       status: error.response?.status,
       statusText: error.response?.statusText,
       data: error.response?.data,
-      message: error.message,
-      fullError: error
+      message: error.message
     });
+
+    if (error.response?.status === 429) {
+      throw new Error('Too Many Attempts');
+    }
 
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');

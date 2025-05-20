@@ -2,11 +2,20 @@ import React, { useState } from 'react';
 import styles from '../componentsStyles/Modal.module.css';
 
 const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false }) => {
+  // Format the due date to YYYY-MM-DD for the input field
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date) 
+      ? date.toISOString().split('T')[0]
+      : '';
+  };
+
   const [formData, setFormData] = useState({
     title: initialData.title || '',
     description: initialData.description || '',
     priority: initialData.priority || 'medium',
-    due_date: initialData.due_date || '',
+    due_date: formatDateForInput(initialData.due_date) || '',
     status: initialData.status || 'todo',
     completion_percentage: initialData.completion_percentage || 0  // Make sure this gets initialized
   });
@@ -49,20 +58,25 @@ const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false })
       newErrors.title = 'Title cannot exceed 255 characters';
     }
 
+    // Add due date validation
+    if (formData.due_date) {
+      const dueDate = new Date(formData.due_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to start of day for proper comparison
+
+      if (isNaN(dueDate.getTime())) {
+        newErrors.due_date = 'Invalid date format';
+      } else if (dueDate < today) {
+        newErrors.due_date = 'Due date cannot be in the past';
+      }
+    }
+
     if (!['todo', 'in_progress', 'completed'].includes(formData.status)) {
       newErrors.status = 'Status must be one of: todo, in_progress, completed';
     }
 
     if (!['low', 'medium', 'high'].includes(formData.priority)) {
       newErrors.priority = 'Priority must be one of: low, medium, high';
-    }
-
-    // Validate due date format
-    if (formData.due_date) {
-      const dueDate = new Date(formData.due_date);
-      if (isNaN(dueDate.getTime())) {
-        newErrors.due_date = 'Invalid date format';
-      }
     }
 
     setErrors(newErrors);
@@ -85,6 +99,9 @@ const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false })
       onSubmit(submissionData);
     }
   };
+
+  // Get today's date in YYYY-MM-DD format for the input max attribute
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <form onSubmit={handleSubmit} className={styles.form}>
@@ -183,7 +200,12 @@ const TaskForm = ({ initialData = {}, onSubmit, isLoading, isEditMode = false })
           name="due_date"
           value={formData.due_date}
           onChange={handleChange}
+          min={today} // Prevent selecting past dates
+          className={errors.due_date ? styles.inputError : ''}
         />
+        {errors.due_date && (
+          <span className={styles.errorMessage}>{errors.due_date}</span>
+        )}
       </div>
 
       <button 

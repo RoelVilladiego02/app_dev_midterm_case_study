@@ -1,6 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { fetchTaskComments, addTaskComment, deleteTaskComment } from '../services/taskCommentService';
-import { fetchNotifications } from '../services/notificationService';
+import React, { useState, useEffect } from 'react';
+import { 
+  fetchTaskComments, 
+  addTaskComment, 
+  deleteTaskComment 
+} from '../services/taskCommentService';
 import styles from '../componentsStyles/TaskComments.module.css';
 
 const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => {
@@ -10,39 +13,23 @@ const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => 
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const canComment = useCallback(() => {
-    if (!currentUser) return false;
-    
-    const currentUserId = String(currentUser.id);
-    
-    // Project owner can always comment
-    if (isProjectOwner) return true;
-  
-    // Check both assignment methods
-    return (
-      (assignedUser && String(assignedUser.id) === currentUserId) ||
-      (Array.isArray(assignedUser?.assignedUsers) && 
-       assignedUser.assignedUsers.some(u => String(u.id) === currentUserId))
-    );
-  }, [currentUser, isProjectOwner, assignedUser]);
-
-  const loadComments = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await fetchTaskComments(taskId);
-      setComments(data);
-      setError('');
-    } catch (err) {
-      setError('Failed to load comments');
-      console.error('Error loading comments:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [taskId]);
-
   useEffect(() => {
+    const loadComments = async () => {
+      try {
+        setLoading(true);
+        const fetchedComments = await fetchTaskComments(taskId);
+        setComments(fetchedComments);
+        setError('');
+      } catch (err) {
+        setError('Failed to load comments');
+        console.error('Error loading comments:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadComments();
-  }, [loadComments]);
+  }, [taskId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,20 +37,11 @@ const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => 
 
     try {
       setSubmitting(true);
-      const result = await addTaskComment(taskId, newComment.trim());
-      setComments([result.comment, ...comments]);
+      await addTaskComment(taskId, newComment.trim());
       setNewComment('');
-      setError('');
-      
-      // Force refresh notifications after adding a comment
-      try {
-        const notificationResponse = await fetchNotifications();
-        if (window.updateNotifications && typeof window.updateNotifications === 'function') {
-          window.updateNotifications(notificationResponse);
-        }
-      } catch (notificationError) {
-        console.error('Failed to refresh notifications:', notificationError);
-      }
+      // Reload comments after adding new one
+      const fetchedComments = await fetchTaskComments(taskId);
+      setComments(fetchedComments);
     } catch (err) {
       setError('Failed to add comment');
       console.error('Error adding comment:', err);
@@ -77,57 +55,61 @@ const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => 
 
     try {
       await deleteTaskComment(taskId, commentId);
-      setComments(comments.filter(comment => comment.id !== commentId));
-      setError('');
+      // Reload comments after deletion
+      const fetchedComments = await fetchTaskComments(taskId);
+      setComments(fetchedComments);
     } catch (err) {
       setError('Failed to delete comment');
       console.error('Error deleting comment:', err);
     }
   };
 
-  if (loading) return <div className={styles.loading}>Loading comments...</div>;
+  const canDeleteComment = (comment) => {
+    return isProjectOwner || comment.user_id === currentUser?.id;
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
+  };
 
   return (
-    <div className={styles.commentsContainer}>
-      {canComment() ? (
-        <form onSubmit={handleSubmit} className={styles.commentForm}>
-          <textarea
-            value={newComment}
-            onChange={(e) => setNewComment(e.target.value)}
-            placeholder="Add a comment..."
-            className={styles.commentInput}
-            disabled={submitting}
-          />
-          <button 
-            type="submit" 
-            disabled={submitting || !newComment.trim()}
-            className={styles.submitButton}
-          >
-            {submitting ? 'Adding...' : 'Add Comment'}
-          </button>
-        </form>
-      ) : (
-        <p className={styles.noPermission}>
-          Only project owners and assigned users can comment on this task.
-        </p>
-      )}
-
+    <div className={styles.commentsSection}>
+      <h4>Comments</h4>
+      
       {error && <div className={styles.error}>{error}</div>}
+      
+      <form onSubmit={handleSubmit} className={styles.commentForm}>
+        <textarea
+          value={newComment}
+          onChange={(e) => setNewComment(e.target.value)}
+          placeholder="Add a comment..."
+          className={styles.commentInput}
+          rows="3"
+          disabled={submitting}
+        />
+        <button 
+          type="submit" 
+          disabled={submitting || !newComment.trim()}
+          className={styles.submitButton}
+        >
+          {submitting ? 'Posting...' : 'Post Comment'}
+        </button>
+      </form>
 
       <div className={styles.commentsList}>
-        {comments.length === 0 ? (
-          <p className={styles.noComments}>No comments yet.</p>
-        ) : (
+        {loading ? (
+          <div className={styles.loading}>Loading comments...</div>
+        ) : comments.length > 0 ? (
           comments.map(comment => (
             <div key={comment.id} className={styles.commentItem}>
               <div className={styles.commentHeader}>
-                <span className={styles.commentAuthor}>{comment.user.name}</span>
-                <span className={styles.commentDate}>
-                  {new Date(comment.created_at).toLocaleString()}
+                <span className={styles.userName}>{comment.user?.name}</span>
+                <span className={styles.timestamp}>
+                  {formatDate(comment.created_at)}
                 </span>
               </div>
               <p className={styles.commentText}>{comment.comment_text}</p>
-              {currentUser.id === comment.user_id && (
+              {canDeleteComment(comment) && (
                 <button
                   onClick={() => handleDelete(comment.id)}
                   className={styles.deleteButton}
@@ -137,6 +119,8 @@ const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => 
               )}
             </div>
           ))
+        ) : (
+          <p className={styles.noComments}>No comments yet</p>
         )}
       </div>
     </div>

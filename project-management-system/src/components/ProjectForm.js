@@ -3,22 +3,42 @@ import PropTypes from 'prop-types';
 import styles from '../componentsStyles/ProjectForm.module.css';
 
 const ProjectForm = ({ initialData = {}, onSubmit, isLoading, isCompleted = false }) => {
+  // Format dates for input fields
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date instanceof Date && !isNaN(date) 
+      ? date.toISOString().split('T')[0]
+      : '';
+  };
+
   const [title, setTitle] = useState(initialData.title || '');
   const [description, setDescription] = useState(initialData.description || '');
-  const [startDate, setStartDate] = useState(initialData.start_date || '');
-  const [endDate, setEndDate] = useState(initialData.end_date || '');
+  const [startDate, setStartDate] = useState(formatDateForInput(initialData.start_date) || '');
+  const [endDate, setEndDate] = useState(formatDateForInput(initialData.end_date) || '');
   const [totalBudget, setTotalBudget] = useState(initialData.total_budget || '');
   const [errors, setErrors] = useState({});
 
   const validateForm = () => {
     const newErrors = {};
-    const MAX_BUDGET = 999999999.99; // Maximum value for MySQL DECIMAL(10,2)
+    const MAX_BUDGET = 999999999.99;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time component for date comparison
     
     if (!title.trim()) newErrors.title = 'Title is required.';
     if (title.length > 255) newErrors.title = 'Title cannot exceed 255 characters.';
     
-    if (endDate && startDate && new Date(endDate) < new Date(startDate)) {
-      newErrors.endDate = 'End date cannot be earlier than start date.';
+    if (endDate) {
+      const endDateObj = new Date(endDate);
+      endDateObj.setHours(0, 0, 0, 0);
+
+      if (startDate && new Date(startDate) > endDateObj) {
+        newErrors.endDate = 'End date cannot be earlier than start date.';
+      }
+      
+      if (endDateObj < today) {
+        newErrors.endDate = 'End date cannot be in the past.';
+      }
     }
     
     if (totalBudget) {
@@ -48,6 +68,9 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading, isCompleted = fals
       });
     }
   };
+
+  // Get today's date for the end date input only
+  const today = new Date().toISOString().split('T')[0];
 
   return (
     <form className={styles.projectForm} onSubmit={handleSubmit}>
@@ -89,6 +112,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading, isCompleted = fals
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
+          min={startDate || today} // Use start date as minimum if available
           disabled={isCompleted}
         />
         {errors.endDate && <p className={styles.error}>{errors.endDate}</p>}

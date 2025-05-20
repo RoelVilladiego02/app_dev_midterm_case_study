@@ -122,19 +122,22 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
 
   return (
     <div className={styles.modalOverlay}>
-      <div className={styles.modalContent}>
-        <h3>Invite Team Member</h3>
+      <div className={styles.teamModalContent}>
+        <h3 className={styles.modalTitle}>Invite Team Member</h3>
         {error && <p className={styles.error}>{error}</p>}
         {success && <p className={styles.success}>{success}</p>}
         
         {loadingUsers ? (
-          <p>Loading available users...</p>
+          <div className={styles.loadingState}>
+            <div className={styles.spinner}></div>
+            <p>Loading available users...</p>
+          </div>
         ) : (
           <form onSubmit={handleInvite}>
             <div className={styles.searchContainer}>
               <input
                 type="text"
-                placeholder="Search by name or email..."
+                placeholder="Search users by name or email..."
                 value={searchQuery}
                 onChange={(e) => handleSearch(e.target.value)}
                 className={styles.searchInput}
@@ -155,11 +158,20 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
                       </div>
                     ))
                   ) : (
-                    <div className={styles.noResults}>No users found</div>
+                    <div className={styles.noResults}>
+                      No matching users found
+                    </div>
                   )}
                 </div>
               )}
             </div>
+            
+            {selectedUser && (
+              <div className={styles.selectedUser}>
+                <div className={styles.userName}>{selectedUser.name}</div>
+                <div className={styles.userEmail}>{selectedUser.email}</div>
+              </div>
+            )}
             
             <div className={styles.modalActions}>
               <button
@@ -167,7 +179,14 @@ const TeamMemberModal = ({ projectId, currentTeamMembers, onClose, onTeamUpdate 
                 disabled={!selectedUser || isLoading}
                 className={styles.submitButton}
               >
-                {isLoading ? 'Sending Invitation...' : 'Send Invitation'}
+                {isLoading ? (
+                  <>
+                    <span className={styles.spinner}></span>
+                    Sending Invitation...
+                  </>
+                ) : (
+                  'Send Invitation'
+                )}
               </button>
               <button
                 type="button"

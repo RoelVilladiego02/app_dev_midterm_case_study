@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   fetchTeamMembers, 
@@ -327,32 +327,115 @@ const ProjectView = () => {
     // Check both assignment methods
     const isAssigned = 
       (task.assigned_user && String(task.assigned_user.id) === currentUserId) ||
-      (task.assignedUsers && 
-       task.assignedUsers.some(u => String(u.id) === currentUserId));
-  
-    return isAssigned;
+      (task.assignedUsers && task.assignedUsers.some(u => String(u.id) === currentUserId));
+    
+    // Team members can access tasks assigned to them
+    return isAssigned || project.teamMembers?.some(member => String(member.id) === currentUserId);
   };
 
   const handleTaskClick = (taskId) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
   
-    console.log('Task access check:', {
-      task,
-      currentUser: user,
-      isOwner,
-      isAssigned: canAccessTask(task)
-    });
-  
     if (canAccessTask(task)) {
       setExpandedTaskId(expandedTaskId === taskId ? null : taskId);
     } else {
       setErrorPopup({
         show: true,
-        message: 'Only project owners and assigned users can view task details'
+        message: 'You do not have permission to view this task'
       });
       setTimeout(() => setErrorPopup({ show: false, message: '' }), 3000);
     }
+  };
+
+  const renderTeamMemberView = () => {
+    return (
+      <div className={styles.teamMemberView}>
+        <div className={styles.projectHeader}>
+          <h1 className={styles.projectTitle}>{project.title}</h1>
+          <p className={styles.projectDescription}>{project.description}</p>
+          
+          <div className={styles.projectMetrics}>
+            <div className={styles.metric}>
+              <div className={styles.metricLabel}>Status</div>
+              <div className={`${styles.metricValue} ${styles[project.status]}`}>
+                {project.status.replace('_', ' ')}
+              </div>
+            </div>
+            <div className={styles.metric}>
+              <div className={styles.metricLabel}>Team Size</div>
+              <div className={styles.metricValue}>{teamMembers.length}</div>
+            </div>
+            <div className={styles.metric}>
+              <div className={styles.metricLabel}>Total Tasks</div>
+              <div className={styles.metricValue}>{tasks.length}</div>
+            </div>
+          </div>
+        </div>
+
+        <TaskProgress tasks={tasks} />
+
+        <div className={styles.taskListTeamMember}>
+          <h2>My Tasks</h2>
+          {tasks.filter(task => canAccessTask(task)).map(task => (
+            <div key={task.id} className={styles.taskCardTeamMember}>
+              <div 
+                className={styles.taskHeader}
+                onClick={() => handleTaskClick(task.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <h3 className={styles.taskTitle}>{task.title}</h3>
+                <span className={`${styles.taskStatus} ${styles[task.status]}`}>
+                  {task.status.replace('_', ' ')}
+                </span>
+              </div>
+              
+              <p className={styles.taskDescription}>{task.description}</p>
+              
+              <div className={styles.taskDetails}>
+                <div className={styles.taskDetail}>
+                  <span className={styles.detailLabel}>Priority</span>
+                  <span className={styles.detailValue}>{task.priority}</span>
+                </div>
+                {task.due_date && (
+                  <div className={styles.taskDetail}>
+                    <span className={styles.detailLabel}>Due Date</span>
+                    <span className={styles.detailValue}>
+                      {new Date(task.due_date).toLocaleDateString()}
+                    </span>
+                  </div>
+                )}
+                <div className={styles.taskDetail}>
+                  <span className={styles.detailLabel}>Progress</span>
+                  <span className={styles.detailValue}>{task.completion_percentage}%</span>
+                </div>
+              </div>
+              
+              {expandedTaskId === task.id && (
+                <div className={styles.expandedContent}>
+                  <TaskComments 
+                    taskId={task.id} 
+                    assignedUser={task.assigned_user}
+                    currentUser={user}
+                    isProjectOwner={false}
+                  />
+                  <TaskFiles 
+                    taskId={task.id} 
+                    isProjectOwner={false}
+                  />
+                </div>
+              )}
+
+              <div className={styles.expandButton}>
+                <button onClick={() => handleTaskClick(task.id)}>
+                  {expandedTaskId === task.id ? 'Show Less' : 'Show More'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   if (loading) return <div className={styles.loadingState}>Loading project data...</div>;
@@ -365,81 +448,92 @@ const ProjectView = () => {
       {errorPopup.show && (
         <div className={styles.errorPopup}>
           <span>{errorPopup.message}</span>
-          <button 
-            onClick={() => setErrorPopup({ show: false, message: '' })}
-            className={styles.closeButton}
-          >
-            ×
-          </button>
+          <button onClick={() => setErrorPopup({ show: false, message: '' })}>×</button>
         </div>
       )}
       
-      <div className={styles.mainLayout}>
-        <div className={styles.mainContent}>
-          <div className={styles.header}>
-            <div>
-              <h1>{project.title}</h1>
-              <p className={styles.description}>{project.description}</p>
-              <div className={styles.projectMeta}>
-                <p className={`${styles.status} ${styles[project.status]}`}>
-                  Status: {project.status.replace('_', ' ')}
-                </p>
-                {project.deadline && (
-                  <p className={styles.deadline}>
-                    Deadline: {new Date(project.deadline).toLocaleDateString()}
+      {isOwner ? (
+        <div className={styles.mainLayout}>
+          <div className={styles.mainContent}>
+            <div className={styles.header}>
+              <div>
+                <h1>{project.title}</h1>
+                <p className={styles.description}>{project.description}</p>
+                <div className={styles.projectMeta}>
+                  <p className={`${styles.status} ${styles[project.status]}`}>
+                    Status: {project.status.replace('_', ' ')}
                   </p>
+                  {project.deadline && (
+                    <p className={styles.deadline}>
+                      Deadline: {new Date(project.deadline).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+                <p className={styles.projectRole}>
+                  Your role: {isOwner ? 'Project Owner' : 'Team Member'}
+                </p>
+              </div>
+              <div className={styles.actions}>
+                {isOwner && (
+                  <>
+                    <button 
+                      onClick={() => setShowEditModal(true)} 
+                      className={styles.editButton}
+                    >
+                      Edit Project
+                    </button>
+                    <button 
+                      onClick={() => navigate(`/reports?projectId=${projectId}`)}
+                      className={styles.reportsButton}
+                    >
+                      📊 View Reports
+                    </button>
+                  </>
                 )}
               </div>
-              <p className={styles.projectRole}>
-                Your role: {isOwner ? 'Project Owner' : 'Team Member'}
-              </p>
             </div>
-            <div className={styles.actions}>
-              {isOwner && (
-                <button 
-                  onClick={() => setShowEditModal(true)} 
-                  className={styles.editButton}
-                >
-                  Edit Project
-                </button>
-              )}
-            </div>
-          </div>
 
-          <TaskProgress tasks={tasks} />
+            <TaskProgress tasks={tasks} />
 
-          {/* Only show budget to owner */}
-          {isOwner && (
-            <BudgetDashboard 
-              projectId={projectId}
-              budget={budget}
-              onUpdate={handleBudgetUpdate}
-              isOwner={isOwner}
-            />
-          )}
+            {/* Only show budget to owner */}
+            {isOwner && (
+              <BudgetDashboard 
+                projectId={projectId}
+                budget={budget}
+                onUpdate={handleBudgetUpdate}
+                isOwner={isOwner}
+              />
+            )}
 
-          {/* Team Members Section */}
-          <div className={styles.teamSection}>
-            <div className={styles.sectionHeader}>
-              <h2>Team Members</h2>
-              {isOwner && (
-                <button 
-                  onClick={() => setShowTeamModal(true)} 
-                  className={styles.addButton}
-                >
-                  Add Team Member
-                </button>
-              )}
-            </div>
-            
-            <div className={styles.teamList}>
-              {/* Active Members Section */}
-              <div className={styles.activeMembers}>
-                <h3>Active Members</h3>
+            {/* Team Members Section */}
+            <div className={styles.teamSection}>
+              <div className={styles.teamHeader}>
+                <h2>Team Members</h2>
+                {isOwner && (
+                  <button 
+                    onClick={() => setShowTeamModal(true)} 
+                    className={styles.addMemberButton}
+                  >
+                    <span>+</span> Add Member
+                  </button>
+                )}
+              </div>
+              
+              <div className={styles.teamGrid}>
                 {teamMembers.length > 0 ? (
                   teamMembers.map(member => (
-                    <div key={member.id} className={styles.teamMember}>
-                      <span>{member.name}</span>
+                    <div key={member.id} className={styles.memberCard}>
+                      <div className={styles.memberInfo}>
+                        <div className={styles.memberAvatar}>
+                          {member.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className={styles.memberDetails}>
+                          <span className={styles.memberName}>{member.name}</span>
+                          <span className={styles.memberRole}>
+                            {member.id === user.id ? 'You' : 'Team Member'}
+                          </span>
+                        </div>
+                      </div>
                       {isOwner && member.id !== user.id && (
                         <button 
                           onClick={() => handleRemoveTeamMember(member.id)}
@@ -451,18 +545,19 @@ const ProjectView = () => {
                     </div>
                   ))
                 ) : (
-                  <p className={styles.emptyState}>No active team members</p>
+                  <div className={styles.emptyState}>
+                    No team members yet
+                  </div>
                 )}
               </div>
 
-              {/* Pending Invites Section */}
               {pendingInvites.length > 0 && (
-                <div className={styles.pendingInvites}>
+                <div className={styles.pendingSection}>
                   <h3>Pending Invites</h3>
                   {pendingInvites.map(invite => (
-                    <div key={invite.id} className={styles.pendingMember}>
-                      <div className={styles.memberInfo}>
-                        <span className={styles.memberName}>
+                    <div key={invite.id} className={styles.pendingCard}>
+                      <div className={styles.pendingInfo}>
+                        <span className={styles.pendingName}>
                           {invite.recipient?.name || 'Unknown User'}
                         </span>
                         <span className={styles.pendingStatus}>Pending</span>
@@ -470,7 +565,7 @@ const ProjectView = () => {
                       {isOwner && (
                         <button 
                           onClick={() => handleCancelInvitation(invite.id)}
-                          className={styles.cancelButton}
+                          className={styles.removeButton}
                         >
                           Cancel
                         </button>
@@ -480,166 +575,169 @@ const ProjectView = () => {
                 </div>
               )}
             </div>
-          </div>
 
-          {/* Tasks Section - team members can view but not modify */}
-          <div className={styles.tasksSection}>
-            <div className={styles.sectionHeader}>
-              <h2>Tasks</h2>
-              {isOwner && (
-                <button onClick={handleAddTask} className={styles.addButton}>
-                  Add Task
-                </button>
+            {/* Tasks Section - team members can view but not modify */}
+            <div className={styles.tasksSection}>
+              <div className={styles.sectionHeader}>
+                <h2>Tasks</h2>
+                {isOwner && (
+                  <button onClick={handleAddTask} className={styles.addButton}>
+                    Add Task
+                  </button>
+                )}
+              </div>
+              
+              {tasks.length > 0 ? (
+                <div className={styles.tasksList}>
+                  {tasks.map(task => (
+                    <div 
+                      key={task.id} 
+                      className={`${styles.taskItem} ${canAccessTask(task) ? styles.accessible : styles.restricted}`}
+                    >
+                      <div 
+                        className={`${styles.taskContent} ${!canAccessTask(task) ? styles.disabled : ''}`} 
+                        onClick={() => handleTaskClick(task.id)}
+                      >
+                        <h3>{task.title}</h3>
+                        <p>{task.description}</p>
+                        <div className={styles.taskMeta}>
+                          <span className={`${styles.status} ${styles[task.status]}`}>
+                            {task.status.replace('_', ' ')}
+                          </span>
+                          <span className={styles.priority}>Priority: {task.priority}</span>
+                          {task.due_date && (
+                            <span className={styles.dueDate}>
+                              Due Date: {new Date(task.due_date).toLocaleDateString()}
+                            </span>
+                          )}
+                          <span className={styles.assignedUser}>
+                            <AssignedUsersList 
+                              projectId={projectId} 
+                              taskId={task.id} 
+                              assignedUser={task.assigned_user} 
+                            />
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {expandedTaskId === task.id && canAccessTask(task) && (
+                        <div className={styles.expandedContent}>
+                          <TaskComments 
+                            taskId={task.id} 
+                            assignedUser={task.assigned_user}
+                            currentUser={user}
+                            isProjectOwner={isOwner}
+                          />
+                          <TaskFiles taskId={task.id} />
+                        </div>
+                      )}
+                      
+                      {isOwner && (
+                        <div className={styles.taskActions}>
+                          <button 
+                            onClick={() => handleShowAssignModal(task.id)}
+                            className={styles.assignButton}
+                          >
+                            {task.assigned_user ? 'Reassign' : 'Assign User'}
+                          </button>
+                          <button 
+                            onClick={() => handleEditTask(task)}
+                            className={styles.editTaskButton}
+                          >
+                            Edit
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteTask(task.id)}
+                            className={styles.deleteButton}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className={styles.emptyState}>No tasks yet.</p>
+              )}
+
+              {/* Add CreateTaskModal */}
+              {showCreateTaskModal && (
+                <CreateTaskModal
+                  projectId={projectId}
+                  teamMembers={teamMembers}
+                  onClose={() => setShowCreateTaskModal(false)}
+                  onTaskCreated={handleTaskCreated}
+                  initialData={{
+                    title: '',
+                    description: '',
+                    status: 'todo',
+                    priority: 'medium',
+                    due_date: '',
+                    assignee: ''
+                  }}
+                />
               )}
             </div>
-            
-            {tasks.length > 0 ? (
-              <div className={styles.tasksList}>
-                {tasks.map(task => (
-                  <div 
-                    key={task.id} 
-                    className={`${styles.taskItem} ${canAccessTask(task) ? styles.accessible : styles.restricted}`}
-                  >
-                    <div 
-                      className={`${styles.taskContent} ${!canAccessTask(task) ? styles.disabled : ''}`} 
-                      onClick={() => handleTaskClick(task.id)}
-                    >
-                      <h3>{task.title}</h3>
-                      <p>{task.description}</p>
-                      <div className={styles.taskMeta}>
-                        <span className={`${styles.status} ${styles[task.status]}`}>
-                          {task.status.replace('_', ' ')}
-                        </span>
-                        <span className={styles.priority}>Priority: {task.priority}</span>
-                        {task.due_date && (
-                          <span className={styles.dueDate}>
-                            Due Date: {new Date(task.due_date).toLocaleDateString()}
-                          </span>
-                        )}
-                        <span className={styles.assignedUser}>
-                          <AssignedUsersList 
-                            projectId={projectId} 
-                            taskId={task.id} 
-                            assignedUser={task.assigned_user} 
-                          />
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {expandedTaskId === task.id && canAccessTask(task) && (
-                      <div className={styles.expandedContent}>
-                        <TaskComments 
-                          taskId={task.id} 
-                          assignedUser={task.assigned_user}
-                          currentUser={user}
-                          isProjectOwner={isOwner}
-                        />
-                        <TaskFiles taskId={task.id} />
-                      </div>
-                    )}
-                    
-                    {isOwner && (
-                      <div className={styles.taskActions}>
-                        <button 
-                          onClick={() => handleShowAssignModal(task.id)}
-                          className={styles.assignButton}
-                        >
-                          {task.assigned_user ? 'Reassign' : 'Assign User'}
-                        </button>
-                        <button 
-                          onClick={() => handleEditTask(task)}
-                          className={styles.editTaskButton}
-                        >
-                          Edit
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteTask(task.id)}
-                          className={styles.deleteButton}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className={styles.emptyState}>No tasks yet.</p>
+
+            {/* Modals - only visible to owner */}
+            {isOwner && showAssignModal && (
+              <AssignUserModal
+                projectId={projectId}
+                taskId={selectedTaskId}
+                onClose={handleAssignmentUpdate}
+              />
             )}
 
-            {/* Add CreateTaskModal */}
-            {showCreateTaskModal && (
-              <CreateTaskModal
+            {isOwner && showTeamModal && (
+              <TeamMemberModal
                 projectId={projectId}
-                teamMembers={teamMembers}
-                onClose={() => setShowCreateTaskModal(false)}
-                onTaskCreated={handleTaskCreated}
-                initialData={{
-                  title: '',
-                  description: '',
-                  status: 'todo',
-                  priority: 'medium',
-                  due_date: '',
-                  assignee: ''
+                currentTeamMembers={teamMembers}
+                onClose={() => {
+                  setShowTeamModal(false);
+                  // Also refresh team members when modal closes
+                  setRefreshTimestamp(Date.now());
                 }}
+                onTeamUpdate={async () => {
+                  const updatedTeam = await fetchTeamMembers(projectId);
+                  setTeamMembers(updatedTeam);
+                }}
+              />
+            )}
+
+            {/* Add the EditProjectModal */}
+            {showEditModal && (
+              <EditProjectModal
+                project={project}
+                onClose={() => setShowEditModal(false)}
+                onProjectUpdated={handleProjectUpdate}
+              />
+            )}
+
+            {/* Add the EditTaskModal */}
+            {showEditTaskModal && selectedTask && (
+              <EditTaskModal
+                projectId={projectId}
+                taskId={selectedTask.id}
+                task={selectedTask}
+                teamMembers={teamMembers}
+                onClose={() => {
+                  setShowEditTaskModal(false);
+                  setSelectedTask(null);
+                }}
+                onTaskUpdated={handleTaskUpdated}
               />
             )}
           </div>
 
-          {/* Modals - only visible to owner */}
-          {isOwner && showAssignModal && (
-            <AssignUserModal
-              projectId={projectId}
-              taskId={selectedTaskId}
-              onClose={handleAssignmentUpdate}
-            />
-          )}
-
-          {isOwner && showTeamModal && (
-            <TeamMemberModal
-              projectId={projectId}
-              currentTeamMembers={teamMembers}
-              onClose={() => {
-                setShowTeamModal(false);
-                // Also refresh team members when modal closes
-                setRefreshTimestamp(Date.now());
-              }}
-              onTeamUpdate={async () => {
-                const updatedTeam = await fetchTeamMembers(projectId);
-                setTeamMembers(updatedTeam);
-              }}
-            />
-          )}
-
-          {/* Add the EditProjectModal */}
-          {showEditModal && (
-            <EditProjectModal
-              project={project}
-              onClose={() => setShowEditModal(false)}
-              onProjectUpdated={handleProjectUpdate}
-            />
-          )}
-
-          {/* Add the EditTaskModal */}
-          {showEditTaskModal && selectedTask && (
-            <EditTaskModal
-              projectId={projectId}
-              taskId={selectedTask.id}
-              task={selectedTask}
-              teamMembers={teamMembers}
-              onClose={() => {
-                setShowEditTaskModal(false);
-                setSelectedTask(null);
-              }}
-              onTaskUpdated={handleTaskUpdated}
-            />
-          )}
+          <div className={styles.sidePanel}>
+            <ActivityFeed taskId={selectedTaskId} projectId={projectId} />
+          </div>
         </div>
-
-        <div className={styles.sidePanel}>
-          <ActivityFeed taskId={selectedTaskId} projectId={projectId} />
-        </div>
-      </div>
+      ) : (
+        // Team member view
+        renderTeamMemberView()
+      )}
     </div>
   );
 };
