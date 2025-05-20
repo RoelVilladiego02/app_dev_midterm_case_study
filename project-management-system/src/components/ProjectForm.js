@@ -69,9 +69,6 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading, isCompleted = fals
     }
   };
 
-  // Get today's date for the end date input only
-  const today = new Date().toISOString().split('T')[0];
-
   return (
     <form className={styles.projectForm} onSubmit={handleSubmit}>
       <div className={styles.formGroup}>
@@ -112,7 +109,7 @@ const ProjectForm = ({ initialData = {}, onSubmit, isLoading, isCompleted = fals
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
-          min={startDate || today} // Use start date as minimum if available
+          min={new Date().toISOString().split('T')[0]} // Prevent selecting past dates
           disabled={isCompleted}
         />
         {errors.endDate && <p className={styles.error}>{errors.endDate}</p>}

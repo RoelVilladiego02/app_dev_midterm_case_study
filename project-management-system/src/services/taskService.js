@@ -17,40 +17,41 @@ export const fetchTasks = async (projectId) => {
     console.log(`Fetching tasks for project ${projectId}`);
     const response = await axios.get(`${API_URL}/api/projects/${projectId}/tasks`);
     
-    // Debug log raw response
-    console.log('Raw tasks from server:', response.data);
+    // Log raw API response
+    console.log('Raw tasks from API:', response.data);
     
     const tasksWithUsers = await Promise.all(response.data.map(async (task) => {
       try {
         const assignedUsers = await fetchAssignedUsers(projectId, task.id);
         
-        // Keep the exact completion_percentage from server
-        const taskData = {
+        // Log task data processing
+        console.log('Processing task:', {
+          id: task.id,
+          title: task.title,
+          status: task.status,
+          completion_percentage: task.completion_percentage
+        });
+
+        // Keep completion_percentage exactly as received from API
+        const processedTask = {
           ...task,
           assigned_user: assignedUsers.length > 0 ? assignedUsers[0] : null,
           assignedUsers: assignedUsers,
-          // Preserve the exact completion_percentage
-          completion_percentage: task.completion_percentage
+          completion_percentage: task.completion_percentage !== null 
+            ? task.completion_percentage 
+            : task.status === 'completed' 
+              ? 100 
+              : task.status === 'in_progress' 
+                ? 50 
+                : 0
         };
 
-        // Debug log for each task
-        console.log('Task completion details:', {
-          taskId: task.id,
-          title: task.title,
-          status: task.status,
-          originalPercentage: task.completion_percentage,
-          preservedPercentage: taskData.completion_percentage
-        });
+        console.log('Processed task:', processedTask);
+        return processedTask;
 
-        return taskData;
       } catch (error) {
         console.error(`Error processing task ${task.id}:`, error);
-        return {
-          ...task,
-          assigned_user: null,
-          assignedUsers: [],
-          completion_percentage: task.completion_percentage
-        };
+        return task;
       }
     }));
 
@@ -103,17 +104,18 @@ export const createTask = async (projectId, taskData) => {
 export const updateTask = async (projectId, taskId, taskData) => {
   setupAuthHeader();
   try {
-    // Always preserve the exact completion_percentage
+    console.log('Updating task with data:', {
+      taskId,
+      originalData: taskData,
+      completion: taskData.completion_percentage
+    });
+
+    // Ensure completion_percentage is explicitly sent as a number
     const formattedTaskData = {
       ...taskData,
-      status: taskData.status,
-      priority: taskData.priority || 'medium',
-      due_date: taskData.due_date && taskData.due_date !== '' ? taskData.due_date : null,
-      // Ensure completion_percentage is sent exactly as provided
-      completion_percentage: taskData.completion_percentage
+      completion_percentage: parseInt(taskData.completion_percentage || 0, 10)
     };
 
-    console.log('Updating task with data:', formattedTaskData);
     const response = await axios.put(
       `${API_URL}/api/projects/${projectId}/tasks/${taskId}`,
       formattedTaskData

@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import ProjectView from './components/ProjectView';
 import NotificationsPage from './components/NotificationsPage';
 import ReportsPage from './components/ReportsPage';
+import RiskManagementPage from './components/RiskManagementPage';
 import './App.css';
 
 /**
@@ -48,6 +49,14 @@ function App() {
             element={
               <PrivateRoute>
                 <ProjectView />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/projects/:projectId/risks"
+            element={
+              <PrivateRoute>
+                <RiskManagementPage />
               </PrivateRoute>
             }
           />

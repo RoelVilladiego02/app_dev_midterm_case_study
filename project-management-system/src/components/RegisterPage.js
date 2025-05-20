@@ -45,64 +45,78 @@ const RegisterPage = () => {
         }
     };
 
-    // Render registration form using React.createElement
-    return React.createElement('div', { className: 'login-container' },
-        React.createElement('div', { className: 'login-box' },
-            React.createElement('h2', null, 'Register'),
-            React.createElement('form', { onSubmit: handleSubmit },
-                React.createElement('div', { className: 'form-group' },
-                    React.createElement('input', {
-                        type: 'text',
-                        placeholder: 'Name',
-                        value: name,
-                        onChange: (e) => setName(e.target.value),
-                        required: true,
-                        className: 'form-control'
-                    })
-                ),
-                React.createElement('div', { className: 'form-group' },
-                    React.createElement('input', {
-                        type: 'email',
-                        placeholder: 'Email',
-                        value: email,
-                        onChange: (e) => setEmail(e.target.value),
-                        required: true,
-                        className: 'form-control'
-                    })
-                ),
-                React.createElement('div', { className: 'form-group' },
-                    React.createElement('input', {
-                        type: 'password',
-                        placeholder: 'Password',
-                        value: password,
-                        onChange: (e) => setPassword(e.target.value),
-                        required: true,
-                        className: 'form-control'
-                    })
-                ),
-                React.createElement('div', { className: 'form-group' },
-                    React.createElement('input', {
-                        type: 'password',
-                        placeholder: 'Confirm Password',
-                        value: passwordConfirmation,
-                        onChange: (e) => setPasswordConfirmation(e.target.value),
-                        required: true,
-                        className: 'form-control'
-                    })
-                ),
-                error && React.createElement('div', { className: 'error-message' }, error),
-                success && React.createElement('div', { className: 'success-message' }, success),
-                React.createElement('button', {
-                    type: 'submit',
-                    disabled: isLoading,
-                    className: 'login-button'
-                }, isLoading ? 'Registering...' : 'Register'),
-                React.createElement('p', { className: 'mt-3 text-center' },
-                    'Already have an account? ',
-                    React.createElement(Link, { to: '/login' }, 'Login here')
-                )
-            )
-        )
+    // Render registration form using JSX
+    return (
+        <div className="register-container">
+            <div className="register-box">
+                <div className="register-header">
+                    <h1>Join Klick Inc.</h1>
+                    <p className="subtitle">Create your Project Management Account</p>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label htmlFor="name">Full Name</label>
+                        <input
+                            id="name"
+                            type="text"
+                            className="form-control"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Enter your full name"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="email">Corporate Email</label>
+                        <input
+                            id="email"
+                            type="email"
+                            className="form-control"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="name@klickinc.com"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="password">Password</label>
+                        <input
+                            id="password"
+                            type="password"
+                            className="form-control"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Create a strong password"
+                            required
+                        />
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="confirmPassword">Confirm Password</label>
+                        <input
+                            id="confirmPassword"
+                            type="password"
+                            className="form-control"
+                            value={passwordConfirmation}
+                            onChange={(e) => setPasswordConfirmation(e.target.value)}
+                            placeholder="Confirm your password"
+                            required
+                        />
+                    </div>
+                    {error && <div className="error-message">{error}</div>}
+                    {success && <div className="success-message">{success}</div>}
+                    <button
+                        type="submit"
+                        className="login-button"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? 'Creating Account...' : 'Create Account'}
+                    </button>
+                </form>
+                <div className="login-footer">
+                    <p>Already have an account? <Link to="/login">Sign In</Link></p>
+                </div>
+            </div>
+        </div>
     );
 };
 

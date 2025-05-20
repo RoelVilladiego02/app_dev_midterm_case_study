@@ -157,7 +157,7 @@ const Header = ({ user }) => {
   return (
     <div className={styles.header}>
       <div className={styles.headerLeft}>
-        <h1>Project Management System</h1>
+        <h1>Klick Inc. Project Management</h1>
         {user && <p className={styles.welcomeText}>Welcome, {user.name}</p>}
       </div>
       <div className={styles.headerRight}>

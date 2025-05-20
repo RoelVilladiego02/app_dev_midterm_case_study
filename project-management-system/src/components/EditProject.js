@@ -64,6 +64,7 @@ const EditProject = () => {
           start_date: project.start_date,
           end_date: project.end_date,
           status: project.status,
+          total_budget: project.total_budget, // Add total_budget
         }} 
         onSubmit={handleSubmit} 
         isLoading={isLoading} 

@@ -55,17 +55,24 @@ const ProjectView = () => {
     if (!Array.isArray(tasksData)) return [];
     
     return tasksData.map(task => {
-      // Log the task data for debugging
-      console.log('Processing task:', {
+      // Debug logging
+      console.log('Raw task data from API:', {
         id: task.id,
         title: task.title,
         status: task.status,
         completion_percentage: task.completion_percentage
       });
       
-      // Return task data without modifying completion_percentage
+      // Keep completion_percentage exactly as received
       return {
-        ...task
+        ...task,
+        completion_percentage: task.completion_percentage !== null 
+          ? task.completion_percentage 
+          : task.status === 'completed' 
+            ? 100 
+            : task.status === 'in_progress' 
+              ? 50 
+              : 0
       };
     });
   };
@@ -348,7 +355,63 @@ const ProjectView = () => {
     }
   };
 
+  const getProgressStyle = (task) => {
+    if (!task) return '';
+    
+    // Style based on task status and completion
+    if (task.status === 'completed') return styles.completed;
+    if (task.status === 'in_progress') return styles.inProgress;
+    return '';
+  };
+
+  const getProgressDescription = (task) => {
+    // Log task data for debugging
+    console.log('Task data for progress:', {
+      id: task.id,
+      status: task.status,
+      completion: task.completion_percentage
+    });
+
+    if (task.status === 'completed') {
+      return 'Task Completed';
+    }
+
+    if (task.status === 'todo') {
+      return 'Not Started';
+    }
+
+    if (task.status === 'in_progress') {
+      return 'On Going';
+    }
+
+    return 'Status Unknown';
+  };
+
   const renderTeamMemberView = () => {
+    // Filter tasks to only show those assigned to the current user
+    const assignedTasks = tasks.filter(task => {
+      const currentUserId = user?.id;
+      // Enhanced debug logging for each task
+      console.log('Team member view - Checking task:', {
+        taskId: task.id,
+        title: task.title,
+        status: task.status,
+        completion: task.completion_percentage,
+        assignedUser: task.assigned_user,
+        currentUser: currentUserId
+      });
+      
+      return task.assigned_user && String(task.assigned_user.id) === String(currentUserId);
+    });
+
+    // Log the filtered tasks for debugging
+    console.log('Filtered assigned tasks:', assignedTasks.map(task => ({
+      id: task.id,
+      title: task.title,
+      status: task.status,
+      completion: task.completion_percentage
+    })));
+
     return (
       <div className={styles.teamMemberView}>
         <div className={styles.projectHeader}>
@@ -363,76 +426,103 @@ const ProjectView = () => {
               </div>
             </div>
             <div className={styles.metric}>
-              <div className={styles.metricLabel}>Team Size</div>
-              <div className={styles.metricValue}>{teamMembers.length}</div>
-            </div>
-            <div className={styles.metric}>
-              <div className={styles.metricLabel}>Total Tasks</div>
-              <div className={styles.metricValue}>{tasks.length}</div>
+              <div className={styles.metricLabel}>Your Tasks</div>
+              <div className={styles.metricValue}>{assignedTasks.length}</div>
             </div>
           </div>
         </div>
 
-        <TaskProgress tasks={tasks} />
+        <TaskProgress tasks={assignedTasks} />
 
         <div className={styles.taskListTeamMember}>
           <h2>My Tasks</h2>
-          {tasks.filter(task => canAccessTask(task)).map(task => (
-            <div key={task.id} className={styles.taskCardTeamMember}>
-              <div 
-                className={styles.taskHeader}
-                onClick={() => handleTaskClick(task.id)}
-                style={{ cursor: 'pointer' }}
-              >
-                <h3 className={styles.taskTitle}>{task.title}</h3>
-                <span className={`${styles.taskStatus} ${styles[task.status]}`}>
-                  {task.status.replace('_', ' ')}
-                </span>
-              </div>
-              
-              <p className={styles.taskDescription}>{task.description}</p>
-              
-              <div className={styles.taskDetails}>
-                <div className={styles.taskDetail}>
-                  <span className={styles.detailLabel}>Priority</span>
-                  <span className={styles.detailValue}>{task.priority}</span>
+          {assignedTasks.length > 0 ? (
+            assignedTasks.map(task => (
+              <div key={task.id} className={styles.taskCardTeamMember}>
+                <div 
+                  className={styles.taskHeader}
+                  onClick={() => handleTaskClick(task.id)}
+                  style={{ cursor: 'pointer' }}
+                >
+                  <div className={styles.taskTitleArea}>
+                    <h3 className={styles.taskTitle}>{task.title}</h3>
+                    {task.description && (
+                      <p className={styles.taskDescription}>
+                        {task.description}
+                      </p>
+                    )}
+                  </div>
+                  <span className={`${styles.taskStatus} ${styles[task.status]}`}>
+                    {task.status.replace('_', ' ')}
+                  </span>
                 </div>
-                {task.due_date && (
+                
+                <div className={styles.taskDetails}>
                   <div className={styles.taskDetail}>
-                    <span className={styles.detailLabel}>Due Date</span>
-                    <span className={styles.detailValue}>
-                      {new Date(task.due_date).toLocaleDateString()}
+                    <span className={styles.detailLabel}>Priority</span>
+                    <span className={`${styles.detailValue} ${styles[`priority_${task.priority}`]}`}>
+                      {task.priority}
                     </span>
                   </div>
-                )}
-                <div className={styles.taskDetail}>
-                  <span className={styles.detailLabel}>Progress</span>
-                  <span className={styles.detailValue}>{task.completion_percentage}%</span>
+                  {task.due_date && (
+                    <div className={styles.taskDetail}>
+                      <span className={styles.detailLabel}>Due Date</span>
+                      <span className={styles.detailValue}>
+                        {new Date(task.due_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                  <div className={styles.taskDetail} style={{ justifyContent: 'center', width: '100%' }}>
+                    <span className={`${styles.detailValue} ${getProgressStyle(task)}`}>
+                      {getProgressDescription(task)}
+                    </span>
+                  </div>
+                  {/* Removed the progressSection div that contained the progress bar */}
                 </div>
-              </div>
-              
-              {expandedTaskId === task.id && (
-                <div className={styles.expandedContent}>
-                  <TaskComments 
-                    taskId={task.id} 
-                    assignedUser={task.assigned_user}
-                    currentUser={user}
-                    isProjectOwner={false}
-                  />
-                  <TaskFiles 
-                    taskId={task.id} 
-                    isProjectOwner={false}
-                  />
-                </div>
-              )}
 
-              <div className={styles.expandButton}>
-                <button onClick={() => handleTaskClick(task.id)}>
-                  {expandedTaskId === task.id ? 'Show Less' : 'Show More'}
-                </button>
+                {expandedTaskId === task.id && (
+                  <div className={styles.expandedContent}>
+                    <TaskComments 
+                      taskId={task.id} 
+                      assignedUser={task.assigned_user}
+                      currentUser={user}
+                      isProjectOwner={false}
+                    />
+                    <TaskFiles 
+                      taskId={task.id} 
+                      isProjectOwner={false}
+                    />
+                  </div>
+                )}
+
+                <div className={styles.expandButton} style={{ 
+                  marginTop: '15px',
+                  padding: '10px 0',
+                  borderTop: '1px solid #eee'
+                }}>
+                  <button 
+                    onClick={() => handleTaskClick(task.id)}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '4px',
+                      border: '1px solid #ccc',
+                      backgroundColor: '#fff',
+                      color: '#444',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    {expandedTaskId === task.id ? 'Show Less' : 'Show More'}
+                  </button>
+                </div>
               </div>
+            ))
+          ) : (
+            <div className={styles.emptyTasksMessage}>
+              No tasks are currently assigned to you.
             </div>
-          ))}
+          )}
         </div>
       </div>
     );
@@ -481,6 +571,12 @@ const ProjectView = () => {
                       className={styles.editButton}
                     >
                       Edit Project
+                    </button>
+                    <button 
+                      onClick={() => navigate(`/projects/${projectId}/risks`)}
+                      className={styles.riskButton}
+                    >
+                      🚨 Risk Management
                     </button>
                     <button 
                       onClick={() => navigate(`/reports?projectId=${projectId}`)}

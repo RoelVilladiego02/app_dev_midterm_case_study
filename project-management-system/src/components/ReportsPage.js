@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { fetchProjects } from '../services/projectService';
 import Header from './Header';
 import ProjectProgress from './reports/ProjectProgress';
 import BudgetAnalytics from './reports/BudgetAnalytics';
 import TaskAnalytics from './reports/TaskAnalytics';
+import RiskMatrix from './reports/RiskMatrix';
 import styles from '../componentsStyles/ReportsPage.module.css';
 
 const ReportsPage = () => {
@@ -18,6 +19,54 @@ const ReportsPage = () => {
   const queryParams = new URLSearchParams(location.search);
   const projectIdFromQuery = queryParams.get('projectId');
 
+  const loadProjectsWithRetry = useCallback(async (retryCount = 0, maxRetries = 3) => {
+    try {
+      setLoading(true);
+      const projectsData = await fetchProjects();
+      
+      if (projectIdFromQuery) {
+        const selectedProject = projectsData.find(p => p.id.toString() === projectIdFromQuery);
+        
+        if (!selectedProject?.isOwner) {
+          setError('You do not have permission to view analytics for this project');
+          return;
+        }
+
+        if (selectedProject) {
+          setProjects([selectedProject]);
+          setSelectedProject(selectedProject.id);
+        }
+      } else {
+        const ownedProjects = projectsData.filter(project => project.isOwner);
+        
+        if (ownedProjects.length === 0) {
+          setError('No owned projects found. Only project owners can access analytics.');
+          return;
+        }
+
+        setProjects(ownedProjects);
+        if (ownedProjects.length > 0) {
+          setSelectedProject(ownedProjects[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading projects:', err);
+      
+      if (err.message.includes('Too Many Attempts') && retryCount < maxRetries) {
+        const delay = Math.pow(2, retryCount) * 1000; // Exponential backoff
+        console.log(`Retrying in ${delay}ms... (Attempt ${retryCount + 1}/${maxRetries})`);
+        setError(`Rate limit reached. Retrying in ${delay/1000} seconds...`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return loadProjectsWithRetry(retryCount + 1, maxRetries);
+      }
+      
+      setError(err.message || 'Failed to load projects');
+    } finally {
+      setLoading(false);
+    }
+  }, [projectIdFromQuery]); // Add projectIdFromQuery as dependency
+
   useEffect(() => {
     const loadUserAndProjects = async () => {
       try {
@@ -26,45 +75,14 @@ const ReportsPage = () => {
           setUser(JSON.parse(userData));
         }
 
-        if (projectIdFromQuery) {
-          // If projectId is in query params, just load that project
-          const projectsData = await fetchProjects();
-          const selectedProject = projectsData.find(p => p.id.toString() === projectIdFromQuery);
-          
-          // Check if user is owner of this project
-          if (!selectedProject?.isOwner) {
-            setError('You do not have permission to view analytics for this project');
-            return;
-          }
-
-          if (selectedProject) {
-            setProjects([selectedProject]);
-            setSelectedProject(selectedProject.id);
-          }
-        } else {
-          // Only load owned projects
-          const projectsData = await fetchProjects();
-          const ownedProjects = projectsData.filter(project => project.isOwner);
-          
-          if (ownedProjects.length === 0) {
-            setError('No owned projects found. Only project owners can access analytics.');
-            return;
-          }
-
-          setProjects(ownedProjects);
-          if (ownedProjects.length > 0) {
-            setSelectedProject(ownedProjects[0].id);
-          }
-        }
+        loadProjectsWithRetry();
       } catch (err) {
         setError('Failed to load projects');
-      } finally {
-        setLoading(false);
       }
     };
 
     loadUserAndProjects();
-  }, [projectIdFromQuery]);
+  }, [loadProjectsWithRetry]); // Add loadProjectsWithRetry as dependency
 
   const handleBack = () => {
     if (projectIdFromQuery) {
@@ -159,6 +177,11 @@ const ReportsPage = () => {
             <div className={styles.reportSection}>
               <h2 className={styles.reportTitle}>Task Analytics</h2>
               <TaskAnalytics projectId={selectedProject} />
+            </div>
+
+            <div className={styles.reportSection}>
+              <h2 className={styles.reportTitle}>Risk Analysis</h2>
+              <RiskMatrix projectId={selectedProject} />
             </div>
           </div>
         )}

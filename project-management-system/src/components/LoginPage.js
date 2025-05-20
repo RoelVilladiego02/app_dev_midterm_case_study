@@ -39,26 +39,30 @@ const LoginPage = () => {
     // Render login form using React.createElement
     return React.createElement('div', { className: 'login-container' },
         React.createElement('div', { className: 'login-box' },
-            React.createElement('h2', null, 'Login'),
+            React.createElement('div', { className: 'login-header' },
+                React.createElement('h1', null, 'Welcome to Klick Inc.'),
+                React.createElement('p', { className: 'subtitle' }, 'Project Management System')
+            ),
             React.createElement('form', { onSubmit: handleSubmit },
                 React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', null, 'Corporate Email'),
                     React.createElement('input', {
                         type: 'email',
-                        placeholder: 'Email',
+                        className: 'form-control',
                         value: email,
                         onChange: (e) => setEmail(e.target.value),
-                        required: true,
-                        className: 'form-control'
+                        placeholder: 'name@klickinc.com',
+                        required: true
                     })
                 ),
                 React.createElement('div', { className: 'form-group' },
+                    React.createElement('label', null, 'Password'),
                     React.createElement('input', {
                         type: 'password',
-                        placeholder: 'Password',
+                        className: 'form-control',
                         value: password,
                         onChange: (e) => setPassword(e.target.value),
-                        required: true,
-                        className: 'form-control'
+                        required: true
                     })
                 ),
                 error && React.createElement('div', { className: 'error-message' }, error),
@@ -66,10 +70,12 @@ const LoginPage = () => {
                     type: 'submit',
                     disabled: isLoading,
                     className: 'login-button'
-                }, isLoading ? 'Logging in...' : 'Login'),
-                React.createElement('p', { className: 'mt-3 text-center' },
-                    'Don\'t have an account? ',
-                    React.createElement(Link, { to: '/register' }, 'Register here')
+                }, isLoading ? 'Signing in...' : 'Sign In')
+            ),
+            React.createElement('div', { className: 'login-footer' },
+                React.createElement('p', null,
+                    "Don't have an account? ",
+                    React.createElement(Link, { to: '/register' }, 'Register')
                 )
             )
         )

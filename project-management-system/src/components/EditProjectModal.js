@@ -65,7 +65,14 @@ const EditProjectModal = ({ project, onClose, onProjectUpdated }) => {
           </div>
         )}
         <ProjectForm 
-          initialData={project}
+          initialData={{
+            title: project.title,
+            description: project.description,
+            start_date: project.start_date,
+            end_date: project.end_date,
+            status: project.status,
+            total_budget: project.total_budget,
+          }} 
           onSubmit={handleSubmit} 
           isLoading={isLoading}
           isCompleted={project.status === 'completed'} 

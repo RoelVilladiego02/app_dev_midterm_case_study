@@ -21,8 +21,11 @@ const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => 
         setComments(fetchedComments);
         setError('');
       } catch (err) {
-        setError('Failed to load comments');
         console.error('Error loading comments:', err);
+        // Only show error if it's not a permission issue
+        if (!err.message.includes('permission')) {
+          setError('Failed to load comments');
+        }
       } finally {
         setLoading(false);
       }
@@ -30,6 +33,13 @@ const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => 
 
     loadComments();
   }, [taskId]);
+
+  // Check if user has access to comment
+  const canComment = () => {
+    if (isProjectOwner) return true;
+    if (!currentUser || !assignedUser) return false;
+    return currentUser.id === assignedUser.id;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,23 +88,25 @@ const TaskComments = ({ taskId, assignedUser, currentUser, isProjectOwner }) => 
       
       {error && <div className={styles.error}>{error}</div>}
       
-      <form onSubmit={handleSubmit} className={styles.commentForm}>
-        <textarea
-          value={newComment}
-          onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Add a comment..."
-          className={styles.commentInput}
-          rows="3"
-          disabled={submitting}
-        />
-        <button 
-          type="submit" 
-          disabled={submitting || !newComment.trim()}
-          className={styles.submitButton}
-        >
-          {submitting ? 'Posting...' : 'Post Comment'}
-        </button>
-      </form>
+      {canComment() && (
+        <form onSubmit={handleSubmit} className={styles.commentForm}>
+          <textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="Add a comment..."
+            className={styles.commentInput}
+            rows="3"
+            disabled={submitting}
+          />
+          <button 
+            type="submit" 
+            disabled={submitting || !newComment.trim()}
+            className={styles.submitButton}
+          >
+            {submitting ? 'Posting...' : 'Post Comment'}
+          </button>
+        </form>
+      )}
 
       <div className={styles.commentsList}>
         {loading ? (

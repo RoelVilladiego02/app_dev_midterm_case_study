@@ -18,7 +18,8 @@ export const fetchTaskComments = async (taskId) => {
   } catch (error) {
     console.error('Error fetching comments:', error);
     if (error.response?.status === 403) {
-      throw new Error('You do not have permission to view these comments');
+      console.warn('Access restricted but allowing empty comments');
+      return []; // Return empty array instead of throwing error
     }
     throw new Error(error.response?.data?.message || 'Failed to fetch comments');
   }

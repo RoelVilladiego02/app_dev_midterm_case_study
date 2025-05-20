@@ -156,3 +156,31 @@ export const deleteNotification = async (notificationId) => {
     return false;
   }
 };
+
+// Add new notification type checks
+export const getNotificationContent = (notification) => {
+  const type = notification.data.type || notification.type;
+
+  switch (type) {
+    case 'task_due_soon':
+      return {
+        message: `Task "${notification.data.task_title}" is due in ${notification.data.days_remaining} days`,
+        type: 'warning',
+        icon: '⚠️'
+      };
+    case 'project_ending_soon':
+      return {
+        message: `Project "${notification.data.project_title}" is ending in ${notification.data.days_remaining} days`,
+        type: 'warning',
+        icon: '📅'
+      };
+    case 'low_budget_alert':
+      return {
+        message: `Project "${notification.data.project_title}" budget is running low (${notification.data.remaining_percentage}% remaining)`,
+        type: 'warning',
+        icon: '💰'
+      };
+    default:
+      return null;
+  }
+};
