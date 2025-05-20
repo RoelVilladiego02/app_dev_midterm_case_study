@@ -15,6 +15,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\TaskCommentController;
 use App\Http\Controllers\TaskFileController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\ReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -102,6 +103,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Activity feed routes
     Route::get('/activity-feed', [ActivityLogController::class, 'index']);
+
+    // Report routes
+    Route::get('/reports/projects/{project}/progress', [ReportController::class, 'projectProgress']);
+    Route::get('/reports/projects/{project}/budget', [ReportController::class, 'budgetUtilization']);
+    Route::get('/reports/projects/{project}/tasks', [ReportController::class, 'taskAnalytics']);
+    Route::get('/projects/{project}/analytics/tasks', [ReportController::class, 'taskAnalytics']);
 });
 
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
